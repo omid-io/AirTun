@@ -227,7 +227,14 @@ public sealed class AppController : IDisposable
         try
         {
             LocalLog.Info("Resolving outbound location and IP...");
-            var geo = await GeoIp.FetchOutboundGeoAsync().ConfigureAwait(false);
+            string? proxyHost = null;
+            int? proxyPort = null;
+            if (State is ConnectionState.ConnectedState connected)
+            {
+                proxyHost = connected.Host;
+                proxyPort = connected.Port;
+            }
+            var geo = await GeoIp.FetchOutboundGeoAsync(proxyHost, proxyPort).ConfigureAwait(false);
             CurrentGeo = geo;
             if (geo is not null)
             {
@@ -264,26 +271,17 @@ public sealed class AppController : IDisposable
 
         _ = Task.Run(async () =>
         {
-            int consecutiveFailures = 0;
             await Task.Delay(500, token).ConfigureAwait(false);
             var (baseUp, baseDown) = ReadAirTunInterfaceBytes();
 
             while (!token.IsCancellationRequested)
             {
-                bool isAlive = await CheckHostHealthAsync(host, port, 1200).ConfigureAwait(false);
-                if (!isAlive)
+                // If in TUN mode and the underlying Wintun session process has exited, trigger cleanup
+                if (ActiveMode == "tun" && !_tunSession.IsRunning)
                 {
-                    consecutiveFailures++;
-                    if (consecutiveFailures >= 2)
-                    {
-                        LocalLog.Error("Phone server stopped or unreachable. Disconnecting...");
-                        _ = Task.Run(() => Disconnect());
-                        break;
-                    }
-                }
-                else
-                {
-                    consecutiveFailures = 0;
+                    LocalLog.Error("Wintun tunnel process exited unexpectedly. Disconnecting...");
+                    _ = Task.Run(() => Disconnect());
+                    break;
                 }
 
                 var (rawUp, rawDown) = ReadAirTunInterfaceBytes();
@@ -319,22 +317,6 @@ public sealed class AppController : IDisposable
         }
         catch { }
         return (0, 0);
-    }
-
-    private static async Task<bool> CheckHostHealthAsync(string host, int port, int timeoutMs)
-    {
-        try
-        {
-            using var client = new System.Net.Sockets.TcpClient();
-            var connectTask = client.ConnectAsync(host, port);
-            var delayTask = Task.Delay(timeoutMs);
-            var completed = await Task.WhenAny(connectTask, delayTask).ConfigureAwait(false);
-            return completed == connectTask && client.Connected;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private void StopStatsPolling()

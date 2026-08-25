@@ -2,10 +2,14 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -177,6 +181,21 @@ func startDNSForwarder(listenAddr string, proxyUrl *url.URL) (func(), error) {
 		return nil, err
 	}
 
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			},
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 20,
+			IdleConnTimeout:     90 * time.Second,
+		},
+		Timeout: 3500 * time.Millisecond,
+	}
+
 	stopChan := make(chan struct{})
 
 	go func() {
@@ -198,8 +217,22 @@ func startDNSForwarder(listenAddr string, proxyUrl *url.URL) (func(), error) {
 			copy(query, buf[:n])
 
 			go func(q []byte, cAddr *net.UDPAddr) {
-				resp, err := queryDNSOverTCP(dialer, "1.1.1.1:53", q)
-				if err != nil {
+				// 1. Primary: Cloudflare DNS-over-HTTPS (Port 443 via SOCKS5)
+				resp, err := queryDoH(httpClient, "https://1.1.1.1/dns-query", q)
+				if err != nil || len(resp) == 0 {
+					// 2. Secondary: Google DNS-over-HTTPS (Port 443 via SOCKS5)
+					resp, err = queryDoH(httpClient, "https://8.8.8.8/dns-query", q)
+				}
+				if err != nil || len(resp) == 0 {
+					// 3. Third: Quad9 DNS-over-HTTPS (Port 443 via SOCKS5)
+					resp, err = queryDoH(httpClient, "https://9.9.9.9/dns-query", q)
+				}
+				if err != nil || len(resp) == 0 {
+					// 4. Fallback: Raw TCP DNS (1.1.1.1:53)
+					resp, err = queryDNSOverTCP(dialer, "1.1.1.1:53", q)
+				}
+				if err != nil || len(resp) == 0 {
+					// 5. Fallback: Raw TCP DNS (8.8.8.8:53)
 					resp, err = queryDNSOverTCP(dialer, "8.8.8.8:53", q)
 				}
 				if err == nil && len(resp) > 0 {
@@ -214,6 +247,27 @@ func startDNSForwarder(listenAddr string, proxyUrl *url.URL) (func(), error) {
 		conn.Close()
 	}
 	return cleanup, nil
+}
+
+func queryDoH(client *http.Client, dohUrl string, query []byte) ([]byte, error) {
+	req, err := http.NewRequest("POST", dohUrl, bytes.NewReader(query))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/dns-message")
+	req.Header.Set("Accept", "application/dns-message")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("doh status %d", resp.StatusCode)
+	}
+
+	return io.ReadAll(resp.Body)
 }
 
 func queryDNSOverTCP(dialer proxy.Dialer, upstream string, query []byte) ([]byte, error) {

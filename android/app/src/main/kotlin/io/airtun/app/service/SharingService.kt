@@ -166,7 +166,7 @@ class SharingService : Service() {
 
         val announcer = AirTunBeacon(
             deviceName = deviceName,
-            socksPort = AirTunConfig.DEFAULT_SOCKS_PORT,
+            socksPort = socksServer?.actualPort ?: AirTunConfig.DEFAULT_SOCKS_PORT,
             pin = pin,
             pinRequired = true,
         ).also { it.start() }
@@ -176,7 +176,7 @@ class SharingService : Service() {
         ConnectionRepository.dispatch("ready") {
             ConnectionState.Advertising(
                 host = host,
-                port = AirTunConfig.DEFAULT_SOCKS_PORT,
+                port = socksServer?.actualPort ?: AirTunConfig.DEFAULT_SOCKS_PORT,
                 pinCode = pin,
                 deviceName = deviceName,
             )

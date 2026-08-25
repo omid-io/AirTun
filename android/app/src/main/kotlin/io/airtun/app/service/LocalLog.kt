@@ -19,6 +19,7 @@ object LocalLog {
     val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
 
     fun add(message: String) {
+        android.util.Log.i("AirTun", message)
         val entry = Entry(System.currentTimeMillis(), message)
         _entries.update { list ->
             (list + entry).takeLast(MAX_ENTRIES)

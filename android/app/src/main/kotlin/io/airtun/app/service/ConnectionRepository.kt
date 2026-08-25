@@ -45,7 +45,9 @@ object ConnectionRepository {
                             bytesDown = bytesDown,
                             reconnecting = current.reconnecting,
                         )
-                    } else current
+                    } else {
+                        current.copy(bytesUp = bytesUp, bytesDown = bytesDown)
+                    }
                 }
                 else -> current
             }
@@ -63,6 +65,8 @@ object ConnectionRepository {
                             port = current.port,
                             pinCode = current.pinCode,
                             deviceName = current.deviceName,
+                            bytesUp = current.bytesUp,
+                            bytesDown = current.bytesDown,
                             reconnecting = current.reconnecting,
                         )
                     } else {
@@ -77,6 +81,8 @@ object ConnectionRepository {
                             pinCode = current.pinCode,
                             deviceName = current.deviceName,
                             clientCount = clientCount,
+                            bytesUp = current.bytesUp,
+                            bytesDown = current.bytesDown,
                             reconnecting = current.reconnecting,
                         )
                     } else current

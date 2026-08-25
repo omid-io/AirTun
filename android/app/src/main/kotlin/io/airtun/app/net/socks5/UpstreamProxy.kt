@@ -41,14 +41,17 @@ object UpstreamProxy {
     private const val REDETECT_COOLDOWN_MS = 5_000L
 
     /**
-     * Probes candidate loopback ports for a live SOCKS5 server (method 0x00/0x02 accepted).
-     * Prefers the last known good port first.
+     * Probes candidate loopback ports for a live SOCKS5 server.
+     * Strategy: first read actual listening ports from /proc/net/tcp (works without
+     * root), because Hiddify/sing-box pick a RANDOM port each session — a static
+     * candidate list can never keep up. Then probe those + the classic static list.
      */
     fun detect(@Suppress("UNUSED_PARAMETER") context: Context?): Int {
         detectedPort = -1
-        val ordered = if (lastKnownGoodPort > 0) {
-            intArrayOf(lastKnownGoodPort) + CANDIDATE_PORTS.filter { it != lastKnownGoodPort }.toIntArray()
-        } else CANDIDATE_PORTS
+        val ordered = linkedSetOf<Int>()
+        if (lastKnownGoodPort > 0) ordered.add(lastKnownGoodPort)
+        ordered.addAll(listenLoopbackPorts())
+        ordered.addAll(CANDIDATE_PORTS.toList())
         for (port in ordered) {
             if (probePort(port)) {
                 detectedPort = port
@@ -59,6 +62,34 @@ object UpstreamProxy {
         }
         Log.i(TAG, "No loopback SOCKS5 upstream found")
         return -1
+    }
+
+    /**
+     * Reads loopback TCP listen ports from /proc/net/tcp.
+     * Format per line: ... local_address(HEX ip:port) rem_address st=0A(LISTEN) ...
+     * Returns dynamic ports (>1024) on 127.0.0.1 in LISTEN state.
+     */
+    private fun listenLoopbackPorts(): List<Int> = try {
+        val out = mutableListOf<Int>()
+        java.io.File("/proc/net/tcp").forEachLine { line ->
+            val parts = line.trim().split(Regex("\\s+"))
+            if (parts.size > 3 && parts[3] == "0A") { // 0A = LISTEN
+                val local = parts[1]
+                val ipPart = local.substringBefore(":")
+                val portHex = local.substringAfter(":")
+                // 0100007F = 127.0.0.1 little-endian; also accept ::1 loopback variants
+                if (ipPart.equals("0100007F", ignoreCase = true)) {
+                    val p = portHex.toIntOrNull(16) ?: 0
+                    // exclude privileged ports + our own server (default or shifted) —
+                    // never chain to ourselves.
+                    if (p > 1024 && p != AirTunConfig.DEFAULT_SOCKS_PORT && p !in 10809..10828) out.add(p)
+                }
+            }
+        }
+        out.distinct()
+    } catch (e: Exception) {
+        Log.w(TAG, "/proc/net/tcp scan failed: ${e.message}")
+        emptyList()
     }
 
     private fun probePort(port: Int): Boolean = try {

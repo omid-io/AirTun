@@ -55,6 +55,11 @@ class Socks5Server(
     val totalBytesUp = AtomicLong(0)
     val totalBytesDown = AtomicLong(0)
 
+    /** The port actually bound (may differ from [port] if the default was busy). */
+    @Volatile
+    var actualPort: Int = port
+        private set
+
     private val authenticatedClients = ConcurrentHashMap.newKeySet<String>()
 
     @Volatile
@@ -74,9 +79,31 @@ class Socks5Server(
                 Log.i(TAG, "No local VPN proxy — direct upstream mode")
             }
         }
-        val server = ServerSocket()
-        server.reuseAddress = true
-        server.bind(InetSocketAddress(port))
+        // Bind with fallback: another VPN app (v2rayNG etc.) may already occupy the
+        // default port on loopback. Try successive ports and remember which one won —
+        // the beacon advertises server.port so Windows clients always find us.
+        var server: ServerSocket? = null
+        var boundPort = port
+        val maxShift = 20
+        for (shift in 0..maxShift) {
+            val candidate = port + shift
+            try {
+                val s = ServerSocket()
+                s.reuseAddress = true
+                s.bind(InetSocketAddress(candidate))
+                server = s
+                boundPort = candidate
+                if (candidate != port) {
+                    Log.w(TAG, "Default port $port busy — bound to $candidate instead")
+                    onLog("Port $port busy — using $candidate")
+                    actualPort = candidate
+                }
+                break
+            } catch (_: IOException) {
+                if (shift == maxShift) throw IOException("No free port in range $port..${port + maxShift}")
+            }
+        }
+        server = requireNotNull(server)
         // CRITICAL: when the phone VPN is active, replies from this listener must leave
         // via the hotspot interface (ap0), not the VPN tunnel — otherwise LAN clients'
         // handshakes never complete (SYN_SENT forever). Bind listener to the LAN network.
@@ -95,8 +122,8 @@ class Socks5Server(
             recordTraffic(up, down)
         }.also { it.start() }
 
-        onLog("SOCKS5 Server listening on port $port (UDP Relay on ${udpRelay?.boundPort})")
-        Log.i(TAG, "SOCKS5 Server started on port $port")
+        onLog("SOCKS5 Server listening on port $boundPort (UDP Relay on ${udpRelay?.boundPort})")
+        Log.i(TAG, "SOCKS5 Server started on port $boundPort")
 
         acceptJob = scope.launch {
             while (isActive) {

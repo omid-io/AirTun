@@ -16,6 +16,8 @@ sealed interface ConnectionState {
         val port: Int,
         val pinCode: String,
         val deviceName: String,
+        val bytesUp: Long = 0,
+        val bytesDown: Long = 0,
         val reconnecting: Boolean = false,
     ) : ConnectionState {
         override val stateName = "Advertising"

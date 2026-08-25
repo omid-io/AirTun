@@ -23,10 +23,24 @@ public sealed class GeoIpService
 
     public async Task<GeoIpInfo?> FetchOutboundGeoAsync(string? proxyHost = null, int? proxyPort = null, CancellationToken ct = default)
     {
+        SocketsHttpHandler? handler = null;
+        HttpClient? customClient = null;
         try
         {
+            if (!string.IsNullOrEmpty(proxyHost) && proxyPort.HasValue && proxyPort.Value > 0)
+            {
+                handler = new SocketsHttpHandler
+                {
+                    Proxy = new WebProxy($"socks5://{proxyHost}:{proxyPort.Value}"),
+                    UseProxy = true,
+                    ConnectTimeout = TimeSpan.FromSeconds(6),
+                };
+                customClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(8) };
+            }
+            var client = customClient ?? _httpClient;
+
             var url = "http://ip-api.com/json/?fields=status,country,countryCode,city,isp,query";
-            var response = await _httpClient.GetStringAsync(url, ct).ConfigureAwait(false);
+            var response = await client.GetStringAsync(url, ct).ConfigureAwait(false);
 
             using var doc = JsonDocument.Parse(response);
             var root = doc.RootElement;
@@ -47,13 +61,19 @@ public sealed class GeoIpService
         {
             try
             {
-                var ip = await _httpClient.GetStringAsync("https://api.ipify.org", ct).ConfigureAwait(false);
+                var client = customClient ?? _httpClient;
+                var ip = await client.GetStringAsync("https://api.ipify.org", ct).ConfigureAwait(false);
                 if (IPAddress.TryParse(ip.Trim(), out _))
                 {
                     return new GeoIpInfo(ip.Trim(), "Connected", "OK", "", "Encrypted Tunnel", "🌐");
                 }
             }
             catch { }
+        }
+        finally
+        {
+            customClient?.Dispose();
+            handler?.Dispose();
         }
 
         return null;

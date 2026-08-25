@@ -125,10 +125,12 @@ fun HomeScreen(
     }
     val bytesUp = when (state) {
         is ConnectionState.Connected -> state.bytesUp
+        is ConnectionState.Advertising -> state.bytesUp
         else -> 0L
     }
     val bytesDown = when (state) {
         is ConnectionState.Connected -> state.bytesDown
+        is ConnectionState.Advertising -> state.bytesDown
         else -> 0L
     }
 
