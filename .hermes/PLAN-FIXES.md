@@ -1,59 +1,61 @@
-# AirTun — پلن جامع فیکسها و تغییرات (تصمیم نهایی: Rail + ۶ تب)
-تاریخ: 2026-08-26 | وضعیت گیت: main @ f1cd47b (تمیز)
+# AirTun — لیست کامل و نهایی کارها (فازبندی شده)
+تاریخ بهروزرسانی: 2026-08-26 | baseline tag: plan-v2-baseline
 
-## 🎯 تصمیمات قطعی شده
-- **ناوبری ویندوز:** Rail سمت راست با ۶ تب (ماکت تاییدشده) — جایگزین nav پایین فعلی
-- **ترتیب تبها:** اتصال | DNS | AI Access | مسیریابی | گزارشها | تنظیمات
-- **اندروید:** فقط شیرکننده میماند؛ تب DNS/AI مال ویندوز است
+> این سند مرجع واحد است. BACKLOG.md قدیمی با این ادغام شد.
 
-## فاز ۰ — فیکسهای سریع پایداری (اولویت: قبل از هر UI)
-| # | تسک | فایل | حجم |
+## 🔴 فاز ۰ — فیکسهای پایداری (کوچک، قبل از هر UI)
+
+| # | کار | منشأ | فایل |
 |---|---|---|---|
-| 0.1 | WakeLock بدون timeout + گره به حضور کلاینت (الگوی Relay) | SharingService.kt | ~۱۰ خط |
-| 0.2 | چک شمارنده per-IP کلاینتها (باگ decrement بدون increment Relay) | Socks5Server.kt finally | ~۵ خط |
-| 0.3 | معافیت Doze: راهنمای UI برای ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (مجوز هست، UI ندارد) | HomeScreen/WarningCode | متوسط |
-| 0.4 | ممیزی deadlineهای مطلق در airtun-tun/main.go (ریشه قطع ۵ دقیقهای Relay) | main.go | تحقیقی |
+| 0.1 | WakeLock بدون timeout + گره به حضور کلاینت (الگوی Relay: acquire() بدون مدت، release وقتی آخرین کلاینت رفت یا teardown) | قطع ترافیک بعد خاموشی صفحه | SharingService.kt |
+| 0.2 | ممیزی شمارنده per-IP کلاینتها — باگ Relay: decrement بدون increment روی کانکشنهای شکسته → wake lock وسط دانلود آزاد میشد | گزارش Relay | Socks5Server.kt finally |
+| 0.3 | معافیت Doze/باتری: مجوز REQUEST_IGNORE_BATTERY_OPTIMIZATIONS هست ولی UI راهنما ندارد → onboarding + نمایش وضعیت isIgnoringBatteryOptimizations | گزارش Relay | HomeScreen + WarningCode |
+| 0.4 | ممیزی deadlineهای مطلق در airtun-tun/main.go — ریشه واقعی «قطع ۵ دقیقهای» Relay آنجا بود (SetDeadline مطلق)؛ باید مطمئن شویم tun2socks ما همین باگ را ندارد | گزارش Relay | main.go |
+| 0.5 | «Live Speed» اندروید: نمایش `/s` روی حجم تجمعی غلط است → یا اسم به «حجم مصرفی» یا سرعت واقعی delta-based (تصمیم کاربر) | تست کاربر | HomeScreen.kt:463 |
 
-## فاز ۱ — Rail Navigation در WinUI (زیرساخت دو تب جدید)
-- تبدیل nav پایین فعلی (Grid ۴ ستونه pill) به Grid.Column راست با عرض ~۵۶px
-- SelectTab(int) به ۶ مورد گسترش یابد؛ آیکنهای SVG موجود حفظ، ۲ آیکن جدید (گlobe برای DNS، ربات/مانیتور برای AI)
-- ConfigureWindow(440,700) → عرض به ~500 افزایش یابد (Rail 56px) یا همان بماند و محتوا فشرده شود — تست بصری
-- RTL: rail سمت راست = ColumnDefinition اول در RTL خودکار
-
-## فاز ۲ — تب DNS (ویندوز)
-محتوا (از طراحی تأییدشده):
-- لیست سرورها: builtin (System, Google, Cloudflare, Shecan, 403.online, Electro, RadarGame, Begzar, Quad9...) + سفارشی کاربر
-- تست هر DNS: latency ×۳ → resolution → bypass-check (curl --resolve الگو)
-- انتخاب فعال → اعمال روی:
-  - TUN mode: پاس دادن DoH endpoint انتخابی به airtun-tun/main.go (به جای hardcode 1.1.1.1)
-  - Proxy mode: ست DNS ویندوز روی adapter یا راهنما
-- ذخیره: JSON در AppData (DnsStore)
-- داده builtin: از لیست ۱۱ سرویس تحقیقشده (IP+DoH+DoT کامل موجود)
-
-## فاز ۳ — تب AI Access (ویندوز)
-- **IPv6 leak test:** resolve AAAA دامنهها هنگام اتصال → نمایش pass/fail + toggle «block AAAA» در tun2socks
-- **IP reputation:** بعد از connect، query به ip-api.com از داخل تونل → کشور/ISP/proxy-flag → توصیه actionable («این کانفیگ برای Gemini مناسب نیست»)
-- **Google Fix resolver:** جدول دامنههای AI (gemini.google.com, *.googleapis.com, ai.google.dev, openai.com, claude.ai) → route از طریق DNS ضدتحریم انتخابی
-- **راهنمای WARP** (متن + لینک)
-
-## ترتیب اجرا و روش انجام
-| مرحله | روش | دلیل |
+## 🔴 فاز ۱ — Rail Navigation ویندوز (تصمیم تاییدشده: Rail سمت راست)
+| # | کار | توضیح |
 |---|---|---|
-| فاز ۰ (همه موارد) | **تکی** — خودم مستقیم | تغییرات کوچک حساس؛ sub-agent overhead نمیارزد |
-| فاز ۱ (Rail) | **تکی** — خودم | XAML layout حساس به جزئیات؛ ماکت مرجع است |
-| فاز ۲ (DNS tab) | **تیمی** — ۲ سابایجنت موازی: (الف) DnsStore+builtin data+تست، (ب) UI XAML+ViewModel | مستقل و parallelizable؛ بعد من integrate میکنم |
-| فاز ۳ (AI tab) | **تیمی** — بعد از فاز ۲ با همان الگو | وابسته به فاز ۲ برای زیرساخت |
+| 1.1 | تبدیل nav پایین ۴ تبه به rail عمودی راست ~۵۶px با ۶ تب | اتصال، DNS، AI Access، مسیریابی، گزارشها، تنظیمات |
+| 1.2 | گسترش SelectTab به ۶ مورد + دو آیکن SVG جدید (globe=DNS, monitor-bot=AI) | MainWindow.xaml.cs:698 الگوی موجود |
+| 1.3 | تست بصری عرض 440px با rail — اگر فشرده بود افزایش به ~500 | ConfigureWindow(440,700) |
+| 1.4 | RTL: rail خودکار سمت راست میافتد (ColumnDefinition اول) — verify | XAML |
 
-## تعریف «تمام» هر فاز
-- build موفق + تستها سبز + checkpoint commit
-- فاز ۲/۳ اضافه: نصب APK/بیلد ویندوز و تست زنده با گوشی متصل
+## 🟠 فاز ۲ — تب DNS ویندوز (پشت feature flag)
+| # | کار |
+|---|---|
+| 2.1 | DnsStore: JSON persistence لیست سرورها (builtin از تحقیق ۱۱ سرویس + سفارشی کاربر) |
+| 2.2 | DnsEngine: سه resolver (UDP raw / DoH / System) همه bound به شبکه upstream |
+| 2.3 | UI تب DNS: لیست + add/edit/delete + radio-select فعال + دکمه تست |
+| 2.4 | تستر ۳ مرحلهای: latency ×۳ median → resolution صحیح → bypass-check (مقایسه با system) |
+| 2.5 | اعمال انتخاب: TUN mode → پاس DoH endpoint به airtun-tun (به جای hardcode)؛ Proxy mode → ست DNS سیستم |
+| 2.6 | قانون resolve: زنجیره فعال = remote-resolve حفظ (رفتار فعلی)؛ فقط direct حالا از DNS کاربر |
 
-## 🛡️ قواعد ایمنی — «اصل کار نباید ضربه بخورد»
-مأموریت اصلی: اتصال پایدار گوشی↔ویندوز. هر تغییر باید این را تضمین کند:
+## 🟣 فاز ۳ — تب AI Access ویندوز (پشت همان flag)
+| # | کار |
+|---|---|
+| 3.1 | IPv6 leak test: هنگام اتصال AAAA resolve چک شود + toggle block-AAAA در tun2socks |
+| 3.2 | IP reputation check بعد از connect: ip-api از داخل تونل → کشور/ISP/proxy-flag → توصیه («این کانفیگ برای Gemini مناسب نیست») |
+| 3.3 | Google-Fix routing rules: جدول دامنههای AI (gemini.google.com, *.googleapis.com, ai.google.dev, openai.com, claude.ai, chatgpt.com) → DNS ضدتحریم انتخابی (pure function قابل تست) |
+| 3.4 | راهنمای WARP (متن + لینک vpndada الگو) |
 
-1. **منطق حیاتی دستنخورده:** Socks5Server handshake/PIN/pipe، WinTunTunnelSession پروتکل READY، ProxySession transactional rollback — فازهای ۲ و ۳ فقط «اضافه» میکنند؛ هیچ refactor روی این مسیرها.
-2. **DNS engine additive است:** نقطه resolve فعلی (resolveOnUpstream → fallback getByName) فقط با wrapper دورش میشود: اگر DnsEngine فعال نبود یا fail کرد = رفتار فعلی. default = off تا رگرسیون نداشته باشیم.
-3. **Rail nav صرفاً UI:** SelectTab همان امضا؛ فقط visibility mapping گسترده میشود. هیچ منطق اتصال به nav وابسته نیست (تست: بعد از تغییر، connect/disconnect در تب دیگری هم کار کند).
-4. **feature flags:** DNS tab و AI tab پشت تنظیم `enable_dns_features` باشند تا در صورت مشکل، خاموشی سریع بدون rebuild ممکن باشد.
-5. **هر فاز مستقل شippable:** بعد از هر فاز برنامه باید مثل قبل connect شود — commit per phase + tag قبل از شروع فاز بعد (rollback نقطه‌ای ممکن).
-6. **تست رگرسیون ثابت بعد از هر فاز:** START گوشی → connect ویندوز (TUN) → ipify خارجی → سایت ایرانی دایرکت → disconnect تمیز. هر کدام شکست = revert فاز.
+## 🟡 فاز ۴ — باگهای باقیمانده P1
+| # | کار | توضیح |
+|---|---|---|
+| 4.1 | Web Proxy mode وصل نمیشود (TUN سالم) — دیباگ ProxySession/WinINetStore؛ چک پورت صحیح بعد port-fallback | باگ تأیید کاربر |
+| 4.2 | تداخل پورت معکوس: انتقال پورت پیشفرض AirTun از 10808 به رنج غیرمتعارف (~27510) که با هیچ VPNای تداخل نداشته باشد؛ بیکون/UI/ویندوز از actualPort میخوانند (زیرساخت آماده) | درخواست صریح کاربر |
+
+## 🧹 فاز ۵ — پاکسازی
+| # | کار |
+|---|---|
+| 5.1 | تغییر کامیتنشده AppController.cs (حذف health-check) — تصمیم نهایی: نگه داشتن IsRunning چک یا revert |
+| 5.2 | حذف crash.log قدیمی و scratch_check.py / scroll_screenshot.py از ریشه ریپو |
+| 5.3 | InsecureSkipVerify در DoH client (main.go:190) — حداقل لاگ هشدار |
+
+## 📋 سناریوی تست رگرسیون ثابت (بعد از هر فاز اجرا شود)
+START گوشی → connect ویندوز TUN → ipify خارجی ✅ → سایت ایرانی دایرکت ✅ → disconnect تمیز ✅
+
+## قواعد ایمنی
+- مسیر حیاتی (handshake/PIN/tunnel protocol) دست نمیخورد؛ تغییرات additive
+- DNS/AI پشت feature flag `enable_dns_features` (default off تا رگرسیون صفر)
+- هر فاز مستقل شippable؛ شکست تست رگرسیون = revert فاز
