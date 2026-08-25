@@ -1,7 +1,9 @@
 package io.airtun.app.net.socks5
 
+import android.content.Context
 import android.util.Log
 import io.airtun.app.core.AirTunConfig
+import io.airtun.app.net.VpnStatus
 import io.airtun.app.net.LocalAddress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,11 +12,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.DatagramSocket
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
@@ -30,10 +33,17 @@ class Socks5Server(
     val port: Int = AirTunConfig.DEFAULT_SOCKS_PORT,
     var pinCode: String = "",
     var pinRequired: Boolean = true,
+    private val upstreamContext: Context? = null,
+    private val bindSocket: ((Socket) -> Boolean)? = null,
+    private val bindDatagramSocket: ((DatagramSocket) -> Boolean)? = null,
     private val onTraffic: (bytesUp: Long, bytesDown: Long) -> Unit,
     private val onClientCountChanged: (count: Int) -> Unit,
     private val onLog: (message: String) -> Unit = {},
 ) {
+    companion object {
+        private const val TAG = "AirTun-Socks5"
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var serverSocket: ServerSocket? = null
     private var acceptJob: Job? = null
@@ -54,22 +64,47 @@ class Socks5Server(
     @Synchronized
     fun start() {
         if (isRunning) return
+        // Probe the phone's local VPN proxy once at startup; refreshed on each start.
+        if (upstreamContext != null) {
+            UpstreamProxy.detect(upstreamContext)
+            if (UpstreamProxy.isAvailable()) {
+                Log.i(TAG, "Upstream chaining ENABLED via loopback :${UpstreamProxy.detectedPort}")
+                onLog("VPN proxy detected on :${UpstreamProxy.detectedPort} — traffic will be chained")
+            } else {
+                Log.i(TAG, "No local VPN proxy — direct upstream mode")
+            }
+        }
         val server = ServerSocket()
         server.reuseAddress = true
         server.bind(InetSocketAddress(port))
+        // CRITICAL: when the phone VPN is active, replies from this listener must leave
+        // via the hotspot interface (ap0), not the VPN tunnel — otherwise LAN clients'
+        // handshakes never complete (SYN_SENT forever). Bind listener to the LAN network.
+        if (upstreamContext != null) {
+            if (!VpnStatus.bindListenerToLocalLan(upstreamContext, server)) {
+                Log.e(TAG, "Listener could not be bound to LAN network; continuing unbound")
+            }
+        }
         serverSocket = server
         isRunning = true
 
-        udpRelay = Socks5UdpRelay { up, down ->
+        udpRelay = Socks5UdpRelay(
+            upstreamContext = upstreamContext,
+            bindDatagramSocket = bindDatagramSocket,
+        ) { up, down ->
             recordTraffic(up, down)
         }.also { it.start() }
 
         onLog("SOCKS5 Server listening on port $port (UDP Relay on ${udpRelay?.boundPort})")
+        Log.i(TAG, "SOCKS5 Server started on port $port")
 
         acceptJob = scope.launch {
             while (isActive) {
                 val clientSocket = try {
-                    server.accept()
+                    val accepted = server.accept()
+                    // Phase-0 diagnostic: proves LAN SYN reaches the app through hotspot+VPN.
+                    Log.i(TAG, "ACCEPT from ${accepted.inetAddress?.hostAddress}:${accepted.port}")
+                    accepted
                 } catch (_: IOException) {
                     break
                 }
@@ -86,84 +121,91 @@ class Socks5Server(
         activeClients.computeIfAbsent(clientIp) { AtomicInteger(0) }.incrementAndGet()
         onClientCountChanged(activeClients.size)
 
+        var clientIn: InputStream? = null
+        var clientOut: OutputStream? = null
+
         try {
             client.soTimeout = AirTunConfig.SOCKET_IDLE_TIMEOUT_MS
             client.tcpNoDelay = true
 
-            val clientIn = DataInputStream(BufferedInputStream(client.getInputStream()))
-            val clientOut = DataOutputStream(BufferedOutputStream(client.getOutputStream()))
+            clientIn = client.getInputStream()
+            clientOut = client.getOutputStream()
 
-            val version = clientIn.readUnsignedByte()
+            val dataIn = DataInputStream(clientIn)
+            val dataOut = DataOutputStream(clientOut)
+
+            val version = dataIn.readUnsignedByte()
             if (version != 0x05) {
+                Log.w(TAG, "Invalid SOCKS version: $version from $clientIp")
                 return
             }
 
-            val nMethods = clientIn.readUnsignedByte()
+            val nMethods = dataIn.readUnsignedByte()
             val methods = ByteArray(nMethods)
-            clientIn.readFully(methods)
+            dataIn.readFully(methods)
 
             val isAlreadyAuth = !pinRequired || authenticatedClients.contains(clientIp)
             val hasUserPass = methods.contains(0x02.toByte())
             val hasNoAuth = methods.contains(0x00.toByte())
 
             if (isAlreadyAuth && hasNoAuth) {
-                clientOut.writeByte(0x05)
-                clientOut.writeByte(0x00)
-                clientOut.flush()
+                dataOut.writeByte(0x05)
+                dataOut.writeByte(0x00)
+                dataOut.flush()
             } else if (pinRequired && hasUserPass) {
-                clientOut.writeByte(0x05)
-                clientOut.writeByte(0x02)
-                clientOut.flush()
+                dataOut.writeByte(0x05)
+                dataOut.writeByte(0x02)
+                dataOut.flush()
 
-                val authVer = clientIn.readUnsignedByte()
+                val authVer = dataIn.readUnsignedByte()
                 if (authVer != 0x01) {
-                    clientOut.writeByte(0x01)
-                    clientOut.writeByte(0xFF)
-                    clientOut.flush()
+                    dataOut.writeByte(0x01)
+                    dataOut.writeByte(0xFF)
+                    dataOut.flush()
                     return
                 }
 
-                val ulen = clientIn.readUnsignedByte()
+                val ulen = dataIn.readUnsignedByte()
                 val unameBytes = ByteArray(ulen)
-                clientIn.readFully(unameBytes)
+                dataIn.readFully(unameBytes)
                 val uname = String(unameBytes, Charsets.UTF_8)
 
-                val plen = clientIn.readUnsignedByte()
+                val plen = dataIn.readUnsignedByte()
                 val passBytes = ByteArray(plen)
-                clientIn.readFully(passBytes)
+                dataIn.readFully(passBytes)
                 val pass = String(passBytes, Charsets.UTF_8)
 
                 val matchesPin = (uname == pinCode || pass == pinCode)
                 if (matchesPin) {
                     authenticatedClients.add(clientIp)
-                    clientOut.writeByte(0x01)
-                    clientOut.writeByte(0x00)
-                    clientOut.flush()
-                    onLog("Client $clientIp authenticated successfully with PIN")
+                    dataOut.writeByte(0x01)
+                    dataOut.writeByte(0x00)
+                    dataOut.flush()
+                    Log.i(TAG, "Client $clientIp authenticated successfully with PIN")
                 } else {
-                    clientOut.writeByte(0x01)
-                    clientOut.writeByte(0xFF)
-                    clientOut.flush()
-                    onLog("Client $clientIp failed PIN authentication")
+                    dataOut.writeByte(0x01)
+                    dataOut.writeByte(0xFF)
+                    dataOut.flush()
+                    Log.w(TAG, "Client $clientIp failed PIN authentication")
                     return
                 }
             } else if (isAlreadyAuth) {
-                clientOut.writeByte(0x05)
-                clientOut.writeByte(0x00)
-                clientOut.flush()
+                dataOut.writeByte(0x05)
+                dataOut.writeByte(0x00)
+                dataOut.flush()
             } else {
-                clientOut.writeByte(0x05)
-                clientOut.writeByte(0xFF)
-                clientOut.flush()
+                dataOut.writeByte(0x05)
+                dataOut.writeByte(0xFF)
+                dataOut.flush()
                 return
             }
 
-            val reqVer = clientIn.readUnsignedByte()
+            val reqVer = dataIn.readUnsignedByte()
             if (reqVer != 0x05) return
 
-            val cmd = clientIn.readUnsignedByte()
-            val rsv = clientIn.readUnsignedByte()
-            val atyp = clientIn.readUnsignedByte()
+            val cmd = dataIn.readUnsignedByte()
+            val rsv = dataIn.readUnsignedByte()
+            val atyp = dataIn.readUnsignedByte()
 
             val targetHost: String
             val targetAddress: InetAddress?
@@ -171,14 +213,14 @@ class Socks5Server(
             when (atyp) {
                 0x01 -> {
                     val ipBytes = ByteArray(4)
-                    clientIn.readFully(ipBytes)
+                    dataIn.readFully(ipBytes)
                     targetAddress = InetAddress.getByAddress(ipBytes)
                     targetHost = targetAddress.hostAddress ?: ""
                 }
                 0x03 -> {
-                    val len = clientIn.readUnsignedByte()
+                    val len = dataIn.readUnsignedByte()
                     val domainBytes = ByteArray(len)
-                    clientIn.readFully(domainBytes)
+                    dataIn.readFully(domainBytes)
                     targetHost = String(domainBytes, Charsets.US_ASCII)
                     targetAddress = try {
                         InetAddress.getByName(targetHost)
@@ -188,65 +230,121 @@ class Socks5Server(
                 }
                 0x04 -> {
                     val ipBytes = ByteArray(16)
-                    clientIn.readFully(ipBytes)
+                    dataIn.readFully(ipBytes)
                     targetAddress = InetAddress.getByAddress(ipBytes)
                     targetHost = targetAddress.hostAddress ?: ""
                 }
                 else -> {
-                    sendReply(clientOut, 0x08)
+                    sendReply(dataOut, 0x08)
                     return
                 }
             }
 
-            val targetPort = clientIn.readUnsignedShort()
+            val targetPort = dataIn.readUnsignedShort()
 
             when (cmd) {
                 0x01 -> {
-                    if (targetAddress == null) {
-                        sendReply(clientOut, 0x04)
+                    val destDescription = if (targetHost.isNotEmpty()) "$targetHost:$targetPort" else "$targetAddress:$targetPort"
+                    Log.d(TAG, "Connecting to destination: $destDescription for client $clientIp")
+
+                    // STRATEGY 1 (preferred): chain through the phone's local VPN proxy
+                    // (Hiddify/sing-box/...). Loopback traffic bypasses kernel UID routing,
+                    // so handshakes with LAN clients always survive an active VPN.
+                    // Lazy re-detect handles the VPN app restarting on a new port.
+                    if (!UpstreamProxy.isAvailable() && upstreamContext != null) {
+                        UpstreamProxy.ensureAvailable(upstreamContext)
+                    }
+                    val chained = UpstreamProxy.connectThrough(targetHost, targetPort)
+                        ?: run {
+                            // One retry after re-detect (port may have moved).
+                            if (upstreamContext != null && UpstreamProxy.ensureAvailable(upstreamContext)) {
+                                UpstreamProxy.connectThrough(targetHost, targetPort)
+                            } else null
+                        }
+                    if (chained == null && UpstreamProxy.isAvailable()) {
+                        // Chain was expected to work but failed — port probably stale.
+                        UpstreamProxy.invalidate()
+                    }
+
+                    if (chained != null) {
+                        sendReply(dataOut, 0x00, chained.localAddress, chained.localPort)
+                        pipeSockets(clientIn, clientOut, chained, client, destDescription)
                         return
                     }
 
+                    // DNS on the upstream network when a hostname was given (VPN-aware resolve).
+                    var resolvedAddress = targetAddress
+                    if (resolvedAddress == null && targetHost.isNotEmpty() && upstreamContext != null) {
+                        resolvedAddress = VpnStatus.resolveOnUpstream(upstreamContext, targetHost)
+                    }
+                    if (resolvedAddress == null && targetHost.isNotEmpty()) {
+                        resolvedAddress = try { InetAddress.getByName(targetHost) } catch (_: Exception) { null }
+                    }
+
+                    // Upstream socket: socketFactory of the bound network (fail-closed).
                     val remoteSocket = try {
-                        Socket().apply {
+                        val created = if (upstreamContext != null) {
+                            VpnStatus.createUpstreamTcpSocket(upstreamContext)
+                                ?: run { sendReply(dataOut, 0x01); return }
+                        } else {
+                            Socket().apply { bindSocket?.invoke(this) }
+                        }
+                        created.apply {
                             soTimeout = AirTunConfig.SOCKET_IDLE_TIMEOUT_MS
                             tcpNoDelay = true
-                            connect(InetSocketAddress(targetAddress, targetPort), 10000)
+                            if (upstreamContext != null && bindSocket != null) {
+                                // legacy hook kept for tests; returns false => fail closed
+                                if (!bindSocket.invoke(this)) {
+                                    try { close() } catch (_: Exception) {}
+                                    sendReply(dataOut, 0x01); return
+                                }
+                            }
+                            if (resolvedAddress != null) {
+                                connect(InetSocketAddress(resolvedAddress, targetPort), 10000)
+                            } else if (targetHost.isNotEmpty()) {
+                                connect(InetSocketAddress(targetHost, targetPort), 10000)
+                            } else {
+                                sendReply(dataOut, 0x04)
+                                return
+                            }
                         }
-                    } catch (_: Exception) {
-                        sendReply(clientOut, 0x05)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed connecting to $destDescription: ${e.message}")
+                        sendReply(dataOut, 0x05)
                         return
                     }
 
-                    sendReply(clientOut, 0x00, remoteSocket.localAddress, remoteSocket.localPort)
-                    pipeSockets(client, remoteSocket)
+                    sendReply(dataOut, 0x00, remoteSocket.localAddress, remoteSocket.localPort)
+                    pipeSockets(clientIn, clientOut, remoteSocket, client, destDescription)
                 }
 
                 0x03 -> {
                     val relay = udpRelay
                     if (relay == null || relay.boundPort <= 0) {
-                        sendReply(clientOut, 0x01)
+                        sendReply(dataOut, 0x01)
                         return
                     }
                     val bindAddr = (client.localAddress as? Inet4Address)
                         ?: LocalAddress.findAdvertisableIpv4()?.let { try { InetAddress.getByName(it) } catch (_: Exception) { null } }
                         ?: InetAddress.getByName("0.0.0.0")
-                    sendReply(clientOut, 0x00, bindAddr, relay.boundPort)
+                    sendReply(dataOut, 0x00, bindAddr, relay.boundPort)
 
                     try {
                         val dummy = ByteArray(64)
-                        while (clientIn.read(dummy) != -1) {
+                        while (dataIn.read(dummy) != -1) {
                         }
                     } catch (_: Exception) {}
                 }
 
                 else -> {
-                    sendReply(clientOut, 0x07)
+                    sendReply(dataOut, 0x07)
                 }
             }
 
-        } catch (_: SocketTimeoutException) {
-        } catch (_: IOException) {
+        } catch (e: SocketTimeoutException) {
+            Log.d(TAG, "Client $clientIp socket timeout: ${e.message}")
+        } catch (e: IOException) {
+            Log.d(TAG, "Client $clientIp IO exception: ${e.message}")
         } finally {
             try { client.close() } catch (_: Exception) {}
             activeConnections.decrementAndGet().coerceAtLeast(0)
@@ -279,39 +377,49 @@ class Socks5Server(
         } catch (_: Exception) {}
     }
 
-    private suspend fun pipeSockets(client: Socket, remote: Socket) {
-        val clientIn = client.getInputStream()
-        val clientOut = client.getOutputStream()
+    private suspend fun pipeSockets(
+        clientIn: InputStream,
+        clientOut: OutputStream,
+        remote: Socket,
+        client: Socket,
+        destTag: String,
+    ) {
         val remoteIn = remote.getInputStream()
         val remoteOut = remote.getOutputStream()
 
         val uploadJob = scope.launch {
             val buf = ByteArray(AirTunConfig.BUFFER_SIZE)
+            var totalUploaded = 0L
             try {
                 while (isActive) {
                     val read = clientIn.read(buf)
                     if (read == -1) break
                     remoteOut.write(buf, 0, read)
                     remoteOut.flush()
+                    totalUploaded += read
                     recordTraffic(read.toLong(), 0L)
                 }
             } catch (_: Exception) {} finally {
                 try { remote.shutdownOutput() } catch (_: Exception) {}
+                Log.d(TAG, "Upload stream closed for $destTag ($totalUploaded bytes sent)")
             }
         }
 
         val downloadJob = scope.launch {
             val buf = ByteArray(AirTunConfig.BUFFER_SIZE)
+            var totalDownloaded = 0L
             try {
                 while (isActive) {
                     val read = remoteIn.read(buf)
                     if (read == -1) break
                     clientOut.write(buf, 0, read)
                     clientOut.flush()
+                    totalDownloaded += read
                     recordTraffic(0L, read.toLong())
                 }
             } catch (_: Exception) {} finally {
                 try { client.shutdownOutput() } catch (_: Exception) {}
+                Log.d(TAG, "Download stream closed for $destTag ($totalDownloaded bytes received)")
             }
         }
 
@@ -320,6 +428,7 @@ class Socks5Server(
             downloadJob.join()
         } finally {
             try { remote.close() } catch (_: Exception) {}
+            try { client.close() } catch (_: Exception) {}
         }
     }
 

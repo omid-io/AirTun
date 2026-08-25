@@ -23,6 +23,7 @@ import io.airtun.app.core.PinCode
 import io.airtun.app.core.WarningCode
 import io.airtun.app.net.AirTunBeacon
 import io.airtun.app.net.LocalAddress
+import io.airtun.app.net.NetworkDiagnostics
 import io.airtun.app.net.VpnStatus
 import io.airtun.app.net.socks5.Socks5Server
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.IOException
+import java.net.DatagramSocket
 
 class SharingService : Service() {
 
@@ -127,6 +129,13 @@ class SharingService : Service() {
                 port = AirTunConfig.DEFAULT_SOCKS_PORT,
                 pinCode = pin,
                 pinRequired = true,
+                upstreamContext = applicationContext,
+                bindSocket = { socket ->
+                    VpnStatus.bindSocketToUpstream(applicationContext, socket)
+                },
+                bindDatagramSocket = { datagramSocket ->
+                    VpnStatus.bindDatagramSocketToUpstream(applicationContext, datagramSocket)
+                },
                 onTraffic = { up, down ->
                     ConnectionRepository.updateTraffic(
                         socksServer?.totalBytesUp?.get() ?: 0L,
@@ -171,6 +180,10 @@ class SharingService : Service() {
                 pinCode = pin,
                 deviceName = deviceName,
             )
+        }
+
+        scope.launch {
+            NetworkDiagnostics.runDiagnostic(applicationContext)
         }
 
         startNetworkWatcher()

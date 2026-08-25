@@ -68,7 +68,10 @@ android {
     }
 
     testOptions {
-        unitTests.all { it.useJUnit() }
+        unitTests.all {
+            it.useJUnit()
+        }
+        unitTests.isReturnDefaultValues = true
     }
 }
 
