@@ -1080,7 +1080,7 @@ public sealed partial class MainWindow : Window
     private async void BtnIpv6Test_Click(object sender, RoutedEventArgs e)
     {
         BtnIpv6Test.IsEnabled = false;
-        TextIpv6Result.Text = "Testing…";
+        TextIpv6Result.Text = Strings.IsPersian ? "در حال تست…" : "Testing…";
         TextIpv6Result.Foreground = (Brush)Application.Current.Resources["LabelSecondary"];
         try
         {
@@ -1095,50 +1095,218 @@ public sealed partial class MainWindow : Window
 
             if (string.IsNullOrEmpty(v6Ip))
             {
-                TextIpv6Result.Text = $"✓ No IPv6 leak — traffic stays on IPv4 ({v4Ip ?? "unknown"}).";
+                TextIpv6Result.Text = (Strings.IsPersian ? "✓ نشتی IPv6 نیست — ترافیک روی IPv4 میماند (" : "✓ No IPv6 leak — traffic stays on IPv4 (") + (v4Ip ?? "?") + ")";
                 TextIpv6Result.Foreground = (Brush)Application.Current.Resources["AccentBrush"];
             }
             else
             {
-                TextIpv6Result.Text = $"⚠ IPv6 LEAK detected: {v6Ip} (IPv4: {v4Ip ?? "none"}). Disable IPv6 in your proxy app — this is the #1 hidden cause of Google 403s.";
-                TextIpv6Result.Foreground = (Brush)Application.Current.Resources["AccentPressedBrush"];
+                TextIpv6Result.Text = (Strings.IsPersian
+                    ? $"⚠ نشتی IPv6: {v6Ip} (IPv4: {v4Ip ?? "ندارد"}). IPv6 را ببندید — علت اصلی 403 گوگل."
+                    : $"⚠ IPv6 LEAK: {v6Ip} (IPv4: {v4Ip ?? "none"}). Block IPv6 — the #1 hidden cause of Google 403s.");
+                TextIpv6Result.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 113, 113));
             }
         }
-        catch (Exception ex) { TextIpv6Result.Text = $"✗ Test failed: {ex.Message}"; }
+        catch (Exception ex) { TextIpv6Result.Text = "✗ " + ex.Message; }
         finally { BtnIpv6Test.IsEnabled = true; }
     }
 
-    private async void BtnIpRep_Click(object sender, RoutedEventArgs e)
+    private void BtnIpv6Block_Click(object sender, RoutedEventArgs e)
     {
-        BtnIpRep.IsEnabled = false;
-        TextIpRep.Text = "Checking…";
-        TextIpRep.Foreground = (Brush)Application.Current.Resources["LabelSecondary"];
+        // Toggle IPv6 preference via prefix policy (Microsoft-recommended, instant, no reboot).
+        // Prefer ::ffff:0:0/96 (IPv4-mapped) over native IPv6 — does NOT disable IPv6.
+        // Fallback for persistence across reboots: DisabledComponents=0x20 in registry.
         try
         {
-            using var http = new System.Net.Http.HttpClient() { Timeout = TimeSpan.FromSeconds(8) };
-            var json = await http.GetStringAsync("http://ip-api.com/json/?fields=status,country,countryCode,isp,org,proxy,hosting,query");
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            var root = doc.RootElement;
+            bool isBlocked;
+            using (var check = Process.Start(new ProcessStartInfo("netsh",
+                "interface ipv6 show prefixpolicies") { CreateNoWindow = true, UseShellExecute = false,
+                RedirectStandardOutput = true }))
+            {
+                check!.WaitForExit(6000);
+                isBlocked = check.StandardOutput.ReadToEnd().Contains("::ffff:0:0/96", StringComparison.OrdinalIgnoreCase);
+            }
 
-            var ip = root.TryGetProperty("query", out var q) ? q.GetString() : "?";
-            var country = root.TryGetProperty("country", out var c) ? c.GetString() : "?";
-            var cc = root.TryGetProperty("countryCode", out var ccP) ? ccP.GetString() : "";
-            var isp = root.TryGetProperty("isp", out var i) ? i.GetString() : "?";
-            bool proxy = root.TryGetProperty("proxy", out var px) && px.GetBoolean();
-            bool hosting = root.TryGetProperty("hosting", out var hs) && hs.GetBoolean();
-
-            var supported = new[] { "US", "UK", "GB", "DE", "NL", "CA", "JP", "FR", "IT", "AU", "KR", "TW", "HK", "SG" };
-            bool geoOk = supported.Contains(cc, StringComparer.OrdinalIgnoreCase);
-
-            if (!geoOk)
-                TextIpRep.Text = $"✗ Exit: {ip} ({country}, {isp}). Country not Gemini-supported → 403 expected. Switch to a config exiting via US/UK/DE/NL/CA/JP.";
-            else if (proxy || hosting)
-                TextIpRep.Text = $"⚠ Exit: {ip} ({country}, {isp}) is a flagged datacenter/proxy IP. Sites work but Google AI may still 403. Prefer residential/mobile exits or chain WARP.";
+            string args;
+            if (isBlocked)
+            {
+                // Revert: delete the custom policy → default precedence 35 restored
+                args = "interface ipv6 delete prefixpolicy ::ffff:0:0/96";
+                RunNetsh(args);
+                TextIpv6Result.Text = Strings.IsPersian
+                    ? "✓ بلاک IPv6 برداشته شد — اولویتها به حالت پیشفرض برگشت."
+                    : "✓ IPv6 block removed — prefix policies restored to default.";
+                TextIpv6Result.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 52, 211, 153));
+                BtnIpv6Block.Content = Strings.IsPersian ? "🚫 بلاک IPv6" : "🚫 Block IPv6";
+            }
             else
-                TextIpRep.Text = $"✓ Exit: {ip} ({country}, {isp}) — clean residential-style IP. Google AI should work.";
+            {
+                // Add policy with higher precedence than ::/0 → IPv4 preferred
+                args = "interface ipv6 add prefixpolicy ::ffff:0:0/96 46 4";
+                var ok = RunNetsh(args);
+                if (!ok) RunNetsh("interface ipv6 set prefixpolicy ::ffff:0:0/96 46 4"); // already exists → set
+
+                TextIpv6Result.Text = Strings.IsPersian
+                    ? "✓ IPv6 ترجیح داده نمیشود — مرورگر را ریاستارت کنید و دوباره تست بگیرید."
+                    : "✓ IPv6 deprioritized — restart your browser and re-test.";
+                TextIpv6Result.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 52, 211, 153));
+                BtnIpv6Block.Content = Strings.IsPersian ? "↩ برداشتن بلاک" : "↩ Unblock";
+            }
+            SmartDnsApplier.FlushCache();
         }
-        catch (Exception ex) { TextIpRep.Text = $"✗ Check failed: {ex.Message}"; }
-        finally { BtnIpRep.IsEnabled = true; }
+        catch (Exception ex)
+        {
+            TextIpv6Result.Text = (Strings.IsPersian ? "✗ خطا: " : "✗ Error: ") + ex.Message;
+        }
+    }
+
+    private static bool RunNetsh(string args)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("netsh", args)
+            { CreateNoWindow = true, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            using var p = Process.Start(psi)!;
+            p.WaitForExit(8000);
+            return p.ExitCode == 0;
+        }
+        catch { return false; }
+    }
+
+    public sealed record AiSiteResult(string Site, int StatusCode, string? FinalUrl, string? Error, bool Ok403);
+
+    private static async Task<AiSiteResult> ProbeAiSite(System.Net.Http.HttpClient http, string name, string url)
+    {
+        try
+        {
+            using var req = new System.Net.Http.HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36");
+            req.Headers.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
+            using var resp = await http.SendAsync(req, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+            var code = (int)resp.StatusCode;
+            var final = resp.RequestMessage?.RequestUri?.Host ?? url;
+            // 200/302 within same host = reachable; 403/429 = blocked; 301→consent.google = still ok
+            bool ok = code is >= 200 and < 400 && !code.Equals(403);
+            return new AiSiteResult(name, code, final, null, ok);
+        }
+        catch (Exception ex)
+        {
+            return new AiSiteResult(name, 0, null, ex.Message, false);
+        }
+    }
+
+    private async void BtnAiCheck_Click(object sender, RoutedEventArgs e)
+    {
+        BtnAiCheck.IsEnabled = false;
+        TextAiCheckResult.Visibility = Visibility.Visible;
+        TextAiCheckResult.Text = Strings.IsPersian ? "در حال بررسی سرویس‌ها…" : "Probing services…";
+        TextAiCheckResult.Foreground = (Brush)Application.Current.Resources["LabelSecondary"];
+
+        try
+        {
+            using var http = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+            }) { Timeout = TimeSpan.FromSeconds(15) };
+
+            var sites = new[]
+            {
+                ("Gemini",   "https://gemini.google.com/"),
+                ("ChatGPT",  "https://chatgpt.com/"),
+                ("Claude",   "https://claude.ai/"),
+                ("YouTube",  "https://www.youtube.com/"),
+                ("AI Studio","https://aistudio.google.com/"),
+            };
+
+            var tasks = sites.Select(s => ProbeAiSite(http, s.Item1, s.Item2)).ToList();
+            var lines = new List<string>();
+            while (tasks.Count > 0)
+            {
+                var done = await Task.WhenAny(tasks);
+                tasks.Remove(done);
+                var r = await done;
+                string icon, line;
+                if (r.Error is not null)
+                {
+                    icon = "✗"; line = $"{icon} {r.Site}: {r.Error}";
+                }
+                else if (r.StatusCode == 403 || r.StatusCode == 429)
+                {
+                    icon = "⛔"; line = Strings.IsPersian
+                        ? $"{icon} {r.Site}: مسدود ({r.StatusCode}) — تحریم IP خروجی"
+                        : $"{icon} {r.Site}: BLOCKED ({r.StatusCode}) — exit-IP restriction";
+                    TextAiCheckResult.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 113, 113));
+                }
+                else if (r.StatusCode >= 500)
+                {
+                    icon = "⚠"; line = $"{icon} {r.Site}: HTTP {r.StatusCode}";
+                }
+                else
+                {
+                    icon = "✓"; line = $"{icon} {r.Site}: OK ({r.StatusCode})";
+                }
+                lines.Add(line);
+            }
+
+            TextAiCheckResult.Text = string.Join("\n", lines);
+            if (!lines.Any(l => l.StartsWith("⛔")))
+                TextAiCheckResult.Foreground = (Brush)Application.Current.Resources["AccentBrush"];
+        }
+        catch (Exception ex)
+        {
+            TextAiCheckResult.Text = "✗ " + ex.Message;
+        }
+        finally { BtnAiCheck.IsEnabled = true; }
+    }
+
+    private async void BtnWarpDetect_Click(object sender, RoutedEventArgs e)
+    {
+        BtnWarpDetect.IsEnabled = false;
+        TextWarpStatus.Text = Strings.IsPersian ? "در حال بررسی…" : "Detecting…";
+        try
+        {
+            // 1) Is the Cloudflare WARP service installed?
+            var warpSvc = Process.GetProcessesByName("warp-svc").FirstOrDefault();
+            var cloudflareDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Cloudflare", "Cloudflare WARP");
+            bool installed = warpSvc is not null || Directory.Exists(cloudflareDir);
+
+            if (!installed)
+            {
+                TextWarpStatus.Text = Strings.IsPersian
+                    ? "✗ WARP نصب نیست. از one.one.one.one دانلود و نصب کنید، سپس در تنظیمات آن حالت Proxy را فعال کنید (پورت 40000)."
+                    : "✗ WARP not installed. Download from one.one.one.one, install it, then enable Proxy mode in its settings (port 40000).";
+                TextWarpStatus.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 113, 113));
+                return;
+            }
+
+            // 2) Is its local proxy port listening? (default 40000 in proxy mode)
+            bool port40000Up = false;
+            try
+            {
+                using var c = new System.Net.Sockets.TcpClient();
+                var ar = c.BeginConnect("127.0.0.1", 40000, null, null);
+                port40000Up = ar.AsyncWaitHandle.WaitOne(1500) && c.Connected;
+                c.Close();
+            }
+            catch { }
+
+            if (port40000Up)
+            {
+                TextWarpStatus.Text = Strings.IsPersian
+                    ? "✓ WARP فعال است (127.0.0.1:40000). کانفیگ v2ray خود را طوری تنظیم کنید که دامنههای گوگل/AI را از این پروکسی رد کند."
+                    : "✓ WARP is active on 127.0.0.1:40000. Point your v2ray config's Google/AI domains through this local proxy.";
+                TextWarpStatus.Foreground = (Brush)Application.Current.Resources["AccentBrush"];
+            }
+            else
+            {
+                TextWarpStatus.Text = Strings.IsPersian
+                    ? "⚠ WARP نصب است ولی حالت Proxy روشن نیست. در اپ Cloudflare WARP: تنظیمات ← Advanced ← Connection ← Enable Proxy mode."
+                    : "⚠ WARP installed but Proxy mode is off. In the Cloudflare WARP app: Settings → Advanced → Connection → Enable Proxy mode.";
+                TextWarpStatus.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 251, 191, 36));
+            }
+        }
+        catch (Exception ex) { TextWarpStatus.Text = "✗ " + ex.Message; }
+        finally { BtnWarpDetect.IsEnabled = true; }
     }
 
     private void CardModeTun_PointerPressed(object sender, PointerRoutedEventArgs e)
