@@ -210,7 +210,7 @@
                                     </Grid.ColumnDefinitions>
                                     <StackPanel Grid.Column="0" Spacing="2">
                                         <TextBlock x:Name="TextConnectedDevice" Text="Connected to Phone" FontSize="19" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
-                                        <TextBlock x:Name="TextConnectedEndpoint" Text="192.168.43.1:10808 (TUN Mode)" FontSize="12.5" FontFamily="{StaticResource FontMono}" Foreground="{StaticResource LabelSecondary}" />
+                                        <TextBlock x:Name="TextConnectedEndpoint" Text="192.168.43.1:27510 (TUN Mode)" FontSize="12.5" FontFamily="{StaticResource FontMono}" Foreground="{StaticResource LabelSecondary}" />
                                     </StackPanel>
                                     <Border Grid.Column="1" Background="{StaticResource FillSunken}" CornerRadius="8" Padding="10,4" VerticalAlignment="Center" BorderBrush="{StaticResource NmSunkenBorderBrush}" BorderThickness="1">
                                         <TextBlock Text="● ACTIVE" FontSize="12" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
