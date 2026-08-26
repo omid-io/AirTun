@@ -13,6 +13,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using AirTun.App.Services;
 using AirTun.Core;
+using AirTun.Core.Resolvers;
 using AirTun.Core.Geo;
 using AirTun.Core.Routing;
 using H.NotifyIcon;
@@ -757,6 +758,8 @@ public sealed partial class MainWindow : Window
         NavIconLogs.Stroke = tabIndex == 4 ? accent : muted;
         NavIconAbout.Stroke = tabIndex == 5 ? accent : muted;
 
+        if (tabIndex == 1) LoadDnsTab();
+
         if (tabIndex == 4)
                 {
                     DispatcherQueue.TryEnqueue(() =>
@@ -776,6 +779,162 @@ public sealed partial class MainWindow : Window
             private void NavBtnRouting_Click(object sender, RoutedEventArgs e) => SelectTab(3);
             private void NavBtnLogs_Click(object sender, RoutedEventArgs e) => SelectTab(4);
             private void NavBtnAbout_Click(object sender, RoutedEventArgs e) => SelectTab(5);
+
+    // ================= DNS TAB =================
+    private List<DnsServer> _dnsServers = new();
+    private string _dnsActiveId = "builtin-system";
+
+    private void LoadDnsTab()
+    {
+        try
+        {
+            (_dnsServers, _dnsActiveId) = DnsStore.Load();
+        }
+        catch { _dnsServers = DnsStore.BuiltIns(); _dnsActiveId = "builtin-system"; }
+        RenderDnsList();
+    }
+
+    private void RenderDnsList()
+    {
+        DnsListPanel.Children.Clear();
+        foreach (var s in _dnsServers)
+        {
+            var isActive = s.Id == _dnsActiveId;
+            var card = new Border
+            {
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(12, 10, 12, 10),
+                Background = isActive ? (Brush)Application.Current.Resources["FillSunken"]
+                                      : new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0)),
+                BorderBrush = isActive ? (Brush)Application.Current.Resources["NmSunkenBorderBrush"]
+                                       : (Brush)Application.Current.Resources["NmBorderBrush"],
+                BorderThickness = new Thickness(1),
+            };
+
+            var row = new StackPanel { Spacing = 4 };
+            var headRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            headRow.Children.Add(new TextBlock
+            {
+                Text = s.Label,
+                FontSize = 13,
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                Foreground = isActive ? (Brush)Application.Current.Resources["AccentBrush"]
+                                      : (Brush)Application.Current.Resources["LabelPrimary"]
+            });
+            var kindBadge = new TextBlock
+            {
+                Text = s.Kind.ToUpperInvariant(),
+                FontSize = 9,
+                Foreground = (Brush)Application.Current.Resources["LabelSecondary"],
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            headRow.Children.Add(kindBadge);
+            if (isActive)
+                headRow.Children.Add(new TextBlock { Text = "✓ active", FontSize = 10, Foreground = (Brush)Application.Current.Resources["AccentBrush"], VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(headRow);
+
+            var addrText = s switch
+            {
+                _ when s.Kind == "system" => "OS default resolver",
+                _ when s.Kind == "doh" => s.DohUrl ?? "",
+                _ => s.Primary + (string.IsNullOrEmpty(s.Secondary) ? "" : $" / {s.Secondary}")
+            };
+            row.Children.Add(new TextBlock { Text = addrText, FontSize = 11, Foreground = (Brush)Application.Current.Resources["LabelSecondary"] });
+
+            var testStatus = new TextBlock { FontSize = 10.5, Visibility = Visibility.Collapsed, TextWrapping = TextWrapping.Wrap };
+            row.Children.Add(testStatus);
+
+            var btnRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 4, 0, 0) };
+
+            var btnTest = new Button { Content = "Test", Padding = new Thickness(12, 5, 12, 5), Style = (Style)Application.Current.Resources["SecondaryButton"] };
+            var capturedServer = s; var capturedTest = testStatus; var capturedBtn = btnTest;
+            btnTest.Click += async (_, _) =>
+            {
+                capturedBtn.IsEnabled = false;
+                capturedTest.Visibility = Visibility.Visible;
+                capturedTest.Text = "Testing…";
+                capturedTest.Foreground = (Brush)Application.Current.Resources["LabelSecondary"];
+                try
+                {
+                    var res = await DnsTester.TestAsync(capturedServer);
+                    if (res.Success)
+                        capturedTest.Text = $"✓ {res.LatencyMs} ms — {res.ResolvedIp}";
+                    else
+                    {
+                        capturedTest.Text = $"✗ {(res.Error ?? "failed")}";
+                        capturedTest.Foreground = (Brush)Application.Current.Resources["AccentPressedBrush"];
+                    }
+                }
+                catch (Exception ex) { capturedTest.Text = $"✗ {ex.Message}"; }
+                finally { capturedBtn.IsEnabled = true; }
+            };
+            btnRow.Children.Add(btnTest);
+
+            if (!isActive)
+            {
+                var btnSelect = new Button { Content = "Set active", Padding = new Thickness(12, 5, 12, 5), Style = (Style)Application.Current.Resources["SecondaryButton"] };
+                var cs = s;
+                btnSelect.Click += (_, _) => { _dnsActiveId = cs.Id; DnsStore.Save(_dnsServers, _dnsActiveId); RenderDnsList(); LocalLog.Info($"DNS set to {cs.Label}"); };
+                btnRow.Children.Add(btnSelect);
+            }
+
+            if (!s.BuiltIn)
+            {
+                var btnDel = new Button { Content = "🗑", Padding = new Thickness(10, 5, 10, 5), Background = TransparentBrush(), BorderThickness = new Thickness(0) };
+                var ds = s;
+                btnDel.Click += (_, _) => { _dnsServers.Remove(ds); if (_dnsActiveId == ds.Id) _dnsActiveId = "builtin-system"; DnsStore.Save(_dnsServers, _dnsActiveId); RenderDnsList(); };
+                btnRow.Children.Add(btnDel);
+            }
+
+            row.Children.Add(btnRow);
+            card.Child = row;
+            DnsListPanel.Children.Add(card);
+        }
+    }
+
+    private static Brush TransparentBrush() => new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+
+    private void BtnAddDns_Click(object sender, RoutedEventArgs e)
+    {
+        // Simple inline prompt: reuse a ContentDialog with two text boxes.
+        var panel = new StackPanel { Spacing = 10 };
+        var tbLabel = new TextBox { PlaceholderText = "Name (e.g. My resolver)", Header = "Name" };
+        var tbPrimary = new TextBox { PlaceholderText = "e.g. 1.1.1.1 or https://.../dns-query", Header = "Primary IP or DoH URL" };
+        panel.Children.Add(tbLabel); panel.Children.Add(tbPrimary);
+
+        var dlg = new ContentDialog
+        {
+            Title = "Add custom DNS",
+            Content = panel,
+            PrimaryButtonText = "Add",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.Content.XamlRoot,
+        };
+        var tcs = new TaskCompletionSource<ContentDialogResult>();
+        dlg.Closed += (_, args) => tcs.TrySetResult(args.Result);
+        _ = dlg.ShowAsync();
+        _ = tcs.Task.ContinueWith(t =>
+        {
+            if (t.Result != ContentDialogResult.Primary) return;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                var label = string.IsNullOrWhiteSpace(tbLabel.Text) ? "Custom DNS" : tbLabel.Text.Trim();
+                var primary = tbPrimary.Text.Trim();
+                var isDoH = primary.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || primary.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                var srv = new DnsServer
+                {
+                    Label = label,
+                    Kind = isDoH ? "doh" : "udp",
+                    Primary = isDoH ? "" : primary,
+                    DohUrl = isDoH ? primary : null,
+                };
+                _dnsServers.Add(srv);
+                DnsStore.Save(_dnsServers, _dnsActiveId);
+                RenderDnsList();
+            });
+        });
+    }
 
     private void CardModeTun_PointerPressed(object sender, PointerRoutedEventArgs e)
     {

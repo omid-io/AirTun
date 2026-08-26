@@ -333,11 +333,9 @@
                         <TextBlock Text="DNS Servers" FontSize="20" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
                         <TextBlock Text="Choose which resolver the tunnel and Windows use" FontSize="12" Foreground="{StaticResource LabelSecondary}" />
                     </StackPanel>
-                    <Border CornerRadius="14" Padding="14,10" Background="{StaticResource FillSunken}" BorderBrush="{StaticResource NmSunkenBorderBrush}" BorderThickness="1">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="DNS engine coming online in the next build — server list, latency tests and bypass checks are being wired to airtun-tun." FontSize="12" Foreground="{StaticResource LabelSecondary}" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
+                    <StackPanel x:Name="DnsListPanel" Spacing="8" />
+                    <Button x:Name="BtnAddDns" Content="+ Add custom DNS" HorizontalAlignment="Stretch" Padding="0,10"
+                            Style="{StaticResource SecondaryButton}" Click="BtnAddDns_Click" />
                 </StackPanel>
             </ScrollViewer>
 
