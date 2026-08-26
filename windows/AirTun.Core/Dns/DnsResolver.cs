@@ -38,20 +38,34 @@ public static class DnsStore
     public static List<DnsServer> BuiltIns() => new()
     {
         new() { Id="builtin-system",   Label="System (default)", Kind="system", Primary="", BuiltIn=true },
+
+        // ── Global ──
         new() { Id="builtin-cloudflare", Label="Cloudflare", Kind="udp", Primary="1.1.1.1", Secondary="1.0.0.1",
                DohUrl="https://1.1.1.1/dns-query", BuiltIn=true },
         new() { Id="builtin-google",   Label="Google",  Kind="udp", Primary="8.8.8.8", Secondary="8.8.4.4",
                DohUrl="https://dns.google/dns-query", BuiltIn=true },
         new() { Id="builtin-quad9",    Label="Quad9",   Kind="udp", Primary="9.9.9.9", Secondary="149.112.112.112",
                DohUrl="https://dns.quad9.net/dns-query", BuiltIn=true },
-        // Iranian anti-sanction resolvers (bypass sanctioned domains via relay)
-        new() { Id="builtin-403",      Label="403.online", Kind="udp", Primary="10.202.10.202", Secondary="10.202.10.102",
-               DohUrl="https://dns.403.online/dns-query", BuiltIn=true },
+
+        // ── Iranian anti-sanction resolvers (verified live 2026-08) ──
+        // 403.online — best community reputation for ChatGPT/Gemini; private 10.x range works during outages.
+        // NOTE: its claimed DoH host did not resolve (2026-08) — UDP only.
+        new() { Id="builtin-403",      Label="403.online", Kind="udp", Primary="10.202.10.202", Secondary="10.202.10.102", BuiltIn=true },
+        new() { Id="builtin-shecan",   Label="Shecan", Kind="udp", Primary="178.22.122.100", Secondary="185.51.200.2",
+               DohUrl="https://free.shecan.ir/dns-query", BuiltIn=true },
         new() { Id="builtin-electro",  Label="Electro", Kind="udp", Primary="78.157.42.100", Secondary="78.157.42.101", BuiltIn=true },
         new() { Id="builtin-radar",    Label="Radar Game", Kind="udp", Primary="10.202.10.10", Secondary="10.202.10.11", BuiltIn=true },
-        new() { Id="builtin-shecan",   Label="Shecan (free)", Kind="udp", Primary="178.22.122.100", Secondary="185.51.200.2",
-               DohUrl="https://free.shecan.ir/dns-query", BuiltIn=true },
-        new() { Id="builtin-begzar",   Label="Begzar", Kind="udp", Primary="185.55.226.26", Secondary="185.55.225.25", BuiltIn=true },
+        // Vanilla — AI + gaming focus; public IPs verified live (private range also exists).
+        new() { Id="builtin-vanilla",  Label="Vanilla", Kind="udp", Primary="194.146.68.68", Secondary="194.146.68.40",
+               DohUrl="https://dns.vanillapp.ir/dns-query", BuiltIn=true },
+        // Beshkan — Nvidia/Intel/AMD/Steam unblocking; DoT: free.beshkanapp.ir
+        new() { Id="builtin-beshkan",  Label="Beshkan", Kind="udp", Primary="181.41.194.177", Secondary="181.41.194.186", BuiltIn=true },
+        // Shelter — gaming/general, live-verified
+        new() { Id="builtin-shelter",  Label="Shelter", Kind="udp", Primary="94.103.125.157", Secondary="94.103.125.158", BuiltIn=true },
+        // Begzar — third IP from official site (2026)
+        new() { Id="builtin-begzar",   Label="Begzar", Kind="udp", Primary="185.55.226.26", Secondary="185.55.224.24", BuiltIn=true },
+        // Pishgaman — ISP resolver, live-verified
+        new() { Id="builtin-pishgaman",Label="Pishgaman", Kind="udp", Primary="5.202.100.100", Secondary="5.202.100.101", BuiltIn=true },
     };
 
     public static (List<DnsServer> Servers, string ActiveId) Load()

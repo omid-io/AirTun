@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
@@ -783,113 +783,202 @@ public sealed partial class MainWindow : Window
     // ================= DNS TAB =================
     private List<DnsServer> _dnsServers = new();
     private string _dnsActiveId = "builtin-system";
+    private string? _pendingDnsId;          // row clicked but Set not yet pressed
+    private readonly Dictionary<string, TextBlock> _latencyCells = new();
+    private readonly Dictionary<string, DnsServer> _rowServers = new();
 
     private void LoadDnsTab()
     {
-        try
-        {
-            (_dnsServers, _dnsActiveId) = DnsStore.Load();
-        }
+        try { (_dnsServers, _dnsActiveId) = DnsStore.Load(); }
         catch { _dnsServers = DnsStore.BuiltIns(); _dnsActiveId = "builtin-system"; }
-        RenderDnsList();
+        _pendingDnsId = null;
+        RenderDnsGroups();
+        RefreshActiveCard();
     }
 
-    private void RenderDnsList()
+    private (string title, List<DnsServer> items)[] GroupDns()
     {
-        DnsListPanel.Children.Clear();
-        foreach (var s in _dnsServers)
+        var iranIds = new[] { "builtin-403", "builtin-shecan", "builtin-electro", "builtin-radar",
+                              "builtin-vanilla", "builtin-beshkan", "builtin-shelter", "builtin-begzar", "builtin-pishgaman" };
+        return new[]
         {
-            var isActive = s.Id == _dnsActiveId;
-            var card = new Border
-            {
-                CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(12, 10, 12, 10),
-                Background = isActive ? (Brush)Application.Current.Resources["FillSunken"]
-                                      : new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0)),
-                BorderBrush = isActive ? (Brush)Application.Current.Resources["NmSunkenBorderBrush"]
-                                       : (Brush)Application.Current.Resources["NmBorderBrush"],
-                BorderThickness = new Thickness(1),
-            };
+            ("🛡 ضد تحریم — ایران", _dnsServers.FindAll(s => iranIds.Contains(s.Id))),
+            ("🌍 جهانی", _dnsServers.FindAll(s =>
+                s.Id.StartsWith("builtin-") && !iranIds.Contains(s.Id))),
+            ("📦 سفارشی", _dnsServers.FindAll(s => !s.BuiltIn)),
+        };
+    }
 
-            var row = new StackPanel { Spacing = 4 };
-            var headRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            headRow.Children.Add(new TextBlock
-            {
-                Text = s.Label,
-                FontSize = 13,
-                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
-                Foreground = isActive ? (Brush)Application.Current.Resources["AccentBrush"]
-                                      : (Brush)Application.Current.Resources["LabelPrimary"]
-            });
-            var kindBadge = new TextBlock
-            {
-                Text = s.Kind.ToUpperInvariant(),
-                FontSize = 9,
-                Foreground = (Brush)Application.Current.Resources["LabelSecondary"],
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            headRow.Children.Add(kindBadge);
-            if (isActive)
-                headRow.Children.Add(new TextBlock { Text = "✓ active", FontSize = 10, Foreground = (Brush)Application.Current.Resources["AccentBrush"], VerticalAlignment = VerticalAlignment.Center });
-            row.Children.Add(headRow);
+    private void RenderDnsGroups()
+    {
+        _latencyCells.Clear();
+        _rowServers.Clear();
+        DnsGroupsPanel.Children.Clear();
 
-            var addrText = s switch
+        foreach (var (title, items) in GroupDns())
+        {
+            if (items.Count == 0) continue;
+
+            var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 8, 0, 5) };
+            header.Children.Add(new TextBlock { Text = title, FontSize = 10.5, FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                                                Foreground = (Brush)Application.Current.Resources["LabelSecondary"] });
+            header.Children.Add(new Border { Width = 60, Height = 1, VerticalAlignment = VerticalAlignment.Center,
+                                             Background = (Brush)Application.Current.Resources["NmBorderBrush"] });
+            DnsGroupsPanel.Children.Add(header);
+
+            var list = new StackPanel { Spacing = 2,
+                Background = (Brush)Application.Current.Resources["NmCardBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["NmBorderBrush"],
+                BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12) };
+
+            foreach (var s in items)
             {
-                _ when s.Kind == "system" => "OS default resolver",
-                _ when s.Kind == "doh" => s.DohUrl ?? "",
-                _ => s.Primary + (string.IsNullOrEmpty(s.Secondary) ? "" : $" / {s.Secondary}")
-            };
-            row.Children.Add(new TextBlock { Text = addrText, FontSize = 11, Foreground = (Brush)Application.Current.Resources["LabelSecondary"] });
+                var selected = s.Id == (_pendingDnsId ?? _dnsActiveId);
+                var active = s.Id == _dnsActiveId;
 
-            var testStatus = new TextBlock { FontSize = 10.5, Visibility = Visibility.Collapsed, TextWrapping = TextWrapping.Wrap };
-            row.Children.Add(testStatus);
+                var row = new Grid { Padding = new Thickness(11, 9, 11, 9), Background = TransparentBrush() };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Auto) });   // radio
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(88) });                     // name
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });   // addr
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(56) });                     // latency
 
-            var btnRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 4, 0, 0) };
+                var radio = new Ellipse { Width = 14, Height = 14, StrokeThickness = 2,
+                    Stroke = (Brush)Application.Current.Resources["LabelSecondary"],
+                    Fill = TransparentBrush(), VerticalAlignment = VerticalAlignment.Center };
+                if (selected) radio.Fill = (Brush)Application.Current.Resources["AccentBrush"];
+                Grid.SetColumn(radio, 0);
 
-            var btnTest = new Button { Content = "Test", Padding = new Thickness(12, 5, 12, 5), Style = (Style)Application.Current.Resources["SecondaryButton"] };
-            var capturedServer = s; var capturedTest = testStatus; var capturedBtn = btnTest;
-            btnTest.Click += async (_, _) =>
-            {
-                capturedBtn.IsEnabled = false;
-                capturedTest.Visibility = Visibility.Visible;
-                capturedTest.Text = "Testing…";
-                capturedTest.Foreground = (Brush)Application.Current.Resources["LabelSecondary"];
-                try
+                var name = new TextBlock { Text = s.Label, FontSize = 12.5, FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(9, 0, 0, 0),
+                    Foreground = selected ? (Brush)Application.Current.Resources["AccentBrush"]
+                                          : (Brush)Application.Current.Resources["LabelPrimary"] };
+                Grid.SetColumn(name, 1);
+
+                var addrText = s.Kind switch
                 {
-                    var res = await DnsTester.TestAsync(capturedServer);
-                    if (res.Success)
-                        capturedTest.Text = $"✓ {res.LatencyMs} ms — {res.ResolvedIp}";
-                    else
-                    {
-                        capturedTest.Text = $"✗ {(res.Error ?? "failed")}";
-                        capturedTest.Foreground = (Brush)Application.Current.Resources["AccentPressedBrush"];
-                    }
+                    "system" => "OS default",
+                    "doh" => s.DohUrl ?? "",
+                    _ => s.Primary + (string.IsNullOrEmpty(s.Secondary) ? "" : $" / {s.Secondary}")
+                };
+                var addr = new TextBlock { Text = addrText, FontSize = 10, FontFamily = new FontFamily("Consolas"),
+                    Foreground = (Brush)Application.Current.Resources["LabelSecondary"],
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0),
+                    TextTrimming = TextTrimming.CharacterEllipsis };
+                Grid.SetColumn(addr, 2);
+
+                var lat = new TextBlock { FontSize = 10, FontFamily = new FontFamily("Consolas"),
+                    HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = (Brush)Application.Current.Resources["LabelSecondary"] };
+                if (active && s.Kind != "system")
+                {
+                    lat.Text = "✓";
+                    lat.Foreground = (Brush)Application.Current.Resources["AccentBrush"];
                 }
-                catch (Exception ex) { capturedTest.Text = $"✗ {ex.Message}"; }
-                finally { capturedBtn.IsEnabled = true; }
-            };
-            btnRow.Children.Add(btnTest);
+                Grid.SetColumn(lat, 3);
+                _latencyCells[s.Id] = lat;
 
-            if (!isActive)
-            {
-                var btnSelect = new Button { Content = "Set active", Padding = new Thickness(12, 5, 12, 5), Style = (Style)Application.Current.Resources["SecondaryButton"] };
-                var cs = s;
-                btnSelect.Click += (_, _) => { _dnsActiveId = cs.Id; DnsStore.Save(_dnsServers, _dnsActiveId); RenderDnsList(); LocalLog.Info($"DNS set to {cs.Label}"); };
-                btnRow.Children.Add(btnSelect);
+                row.Children.Add(radio); row.Children.Add(name); row.Children.Add(addr); row.Children.Add(lat);
+                row.PointerPressed += (_, _) => { _pendingDnsId = s.Id; RenderDnsGroups(); };
+                _rowServers[s.Id] = s;
+
+                list.Children.Add(row);
             }
-
-            if (!s.BuiltIn)
-            {
-                var btnDel = new Button { Content = "🗑", Padding = new Thickness(10, 5, 10, 5), Background = TransparentBrush(), BorderThickness = new Thickness(0) };
-                var ds = s;
-                btnDel.Click += (_, _) => { _dnsServers.Remove(ds); if (_dnsActiveId == ds.Id) _dnsActiveId = "builtin-system"; DnsStore.Save(_dnsServers, _dnsActiveId); RenderDnsList(); };
-                btnRow.Children.Add(btnDel);
-            }
-
-            row.Children.Add(btnRow);
-            card.Child = row;
-            DnsListPanel.Children.Add(card);
+            DnsGroupsPanel.Children.Add(list);
         }
+    }
+
+    private void RefreshActiveCard()
+    {
+        var s = _dnsServers.FirstOrDefault(x => x.Id == _dnsActiveId);
+        if (s is null) { TextActiveName.Text = "—"; return; }
+        TextActiveName.Text = s.Label;
+        TextActiveAddr.Text = s.Kind == "system" ? "OS default"
+            : s.Kind == "doh" ? s.DohUrl ?? ""
+            : s.Primary + (string.IsNullOrEmpty(s.Secondary) ? "" : $" / {s.Secondary}");
+        TextActiveLatency.Text = "";
+
+        var target = SmartDnsApplier.Current;
+        TextDnsStatus.Visibility = Visibility.Visible;
+        TextDnsStatus.Text = target is null
+            ? "برای اعمال روی سیستم، انتخاب کنید و دکمه ✓ Set را بزنید."
+            : $"📍 اعمالشده روی: {target.AdapterName}";
+    }
+
+    private async void BtnTestAllDns_Click(object sender, RoutedEventArgs e)
+    {
+        BtnTestAllDns.IsEnabled = false;
+        foreach (var kv in _latencyCells) { kv.Value.Text = "…"; kv.Value.Foreground = (Brush)Application.Current.Resources["LabelSecondary"]; }
+
+        var tasks = _rowServers.Select(async kv =>
+        {
+            var res = await DnsTester.TestAsync(kv.Value);
+            return (kv.Key, res);
+        }).ToList();
+
+        while (tasks.Count > 0)
+        {
+            var done = await Task.WhenAny(tasks);
+            tasks.Remove(done);
+            var (id, res) = await done;
+            if (!_latencyCells.TryGetValue(id, out var cell)) continue;
+            if (res.Success)
+            {
+                cell.Text = $"{res.LatencyMs} ms";
+                cell.Foreground = new SolidColorBrush(res.LatencyMs < 80 ? Windows.UI.Color.FromArgb(255, 52, 211, 153)
+                                              : res.LatencyMs < 200 ? Windows.UI.Color.FromArgb(255, 251, 191, 36)
+                                                                     : Windows.UI.Color.FromArgb(255, 248, 113, 113));
+            }
+            else { cell.Text = "✗"; cell.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 113, 113)); }
+            if (id == _dnsActiveId) TextActiveLatency.Text = res.Success ? $"{res.LatencyMs} ms" : "✗";
+        }
+        BtnTestAllDns.IsEnabled = true;
+    }
+
+    private void BtnApplyDns_Click(object sender, RoutedEventArgs e)
+    {
+        var id = _pendingDnsId ?? _dnsActiveId;
+        var server = _dnsServers.FirstOrDefault(x => x.Id == id);
+        if (server is null) return;
+
+        bool tunRunning = _controller.State is ConnectionState.ConnectedState && _controller.ActiveMode == "tun";
+        var (ok, msg) = SmartDnsApplier.Apply(server, tunRunning);
+
+        if (ok)
+        {
+            _dnsActiveId = id;
+            _pendingDnsId = null;
+            DnsStore.Save(_dnsServers, _dnsActiveId);
+            LocalLog.Info($"DNS applied: {server.Label} — {msg}");
+        }
+        TextDnsStatus.Visibility = Visibility.Visible;
+        TextDnsStatus.Text = (ok ? "✓ " : "✗ ") + msg;
+        TextDnsStatus.Foreground = ok ? (Brush)Application.Current.Resources["AccentBrush"]
+                                      : new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 113, 113));
+        RenderDnsGroups();
+        RefreshActiveCard();
+    }
+
+    private void BtnUnsetDns_Click(object sender, RoutedEventArgs e)
+    {
+        var (ok, msg) = SmartDnsApplier.Unset();
+        if (ok)
+        {
+            _dnsActiveId = "builtin-system";
+            _pendingDnsId = null;
+            DnsStore.Save(_dnsServers, _dnsActiveId);
+            LocalLog.Info("DNS reverted to system default");
+        }
+        TextDnsStatus.Visibility = Visibility.Visible;
+        TextDnsStatus.Text = (ok ? "✓ " : "✗ ") + msg;
+        RenderDnsGroups();
+        RefreshActiveCard();
+    }
+
+    private void BtnFlushDns_Click(object sender, RoutedEventArgs e)
+    {
+        SmartDnsApplier.FlushCache();
+        BtnFlushDns.Content = "✓ Flushed";
+        DispatcherQueue.TryEnqueue(() => { Task.Delay(1400).Wait(); BtnFlushDns.Content = "🧹 Flush DNS"; });
     }
 
     private static Brush TransparentBrush() => new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
@@ -931,7 +1020,7 @@ public sealed partial class MainWindow : Window
                 };
                 _dnsServers.Add(srv);
                 DnsStore.Save(_dnsServers, _dnsActiveId);
-                RenderDnsList();
+                RenderDnsGroups(); RefreshActiveCard();
             });
         });
     }

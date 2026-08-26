@@ -1,4 +1,4 @@
-<Window
+﻿<Window
     x:Class="AirTun.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
@@ -333,6 +333,15 @@
                         <TextBlock Text="DNS Servers" FontSize="20" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
                         <TextBlock Text="Choose which resolver the tunnel and Windows use" FontSize="12" Foreground="{StaticResource LabelSecondary}" />
                     </StackPanel>
+                    <TextBlock x:Name="TextActiveName"/>
+                    <TextBlock x:Name="TextActiveAddr"/>
+                    <TextBlock x:Name="TextActiveLatency"/>
+                    <StackPanel x:Name="DnsGroupsPanel" Spacing="4"/>
+                    <Button x:Name="BtnTestAllDns" Click="BtnTestAllDns_Click"/>
+                    <Button x:Name="BtnApplyDns" Click="BtnApplyDns_Click"/>
+                    <Button x:Name="BtnFlushDns" Click="BtnFlushDns_Click"/>
+                    <Button x:Name="BtnUnsetDns" Click="BtnUnsetDns_Click"/>
+                    <TextBlock x:Name="TextDnsStatus"/>
                     <StackPanel x:Name="DnsListPanel" Spacing="8" />
                     <Button x:Name="BtnAddDns" Content="+ Add custom DNS" HorizontalAlignment="Stretch" Padding="0,10"
                             Style="{StaticResource SecondaryButton}" Click="BtnAddDns_Click" />
