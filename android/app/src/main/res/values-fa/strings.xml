@@ -37,7 +37,7 @@
     <string name="warning_no_vpn_title">هیچ VPN فعالی روی گوشی نیست</string>
     <string name="warning_no_vpn_body">اینترنت مستقیم گوشی شما در حال اشتراک است. اگر قصد اشتراک اینترنت فیلترشکن را دارید، ابتدا آن را روشن کنید.</string>
     <string name="warning_vpn_captures_title">هشدار تداخل وی‌پی‌ان</string>
-    <string name="warning_vpn_captures_body">برنامه وی‌پی‌ان ممکن است ترافیک شبکه محلی را مسدود کند. در صورت عدم اتصال ویندوز، گزینه Local Network Bypass را در وی‌پی‌ان فعال کنید.</string>
+    <string name="warning_vpn_captures_body">کلاینتی وصل شد ولی handshake متوقف ماند — برنامه وی‌پی‌ان ترافیک خود AirTun را کپچر میکند. راهحل: در اپ وی‌پی‌ان (v2rayNG/هیدیفای) ← تنظیمات ← Per-app proxy ← حالت Exclude ← تیک AirTun. سپس دوباره وصل شوید.</string>
 
     <!-- Advanced -->
     <string name="advanced">تنظیمات شبکه و گزارش</string>

@@ -29,16 +29,27 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
+/** True for 127.x.x.x loopback addresses. */
+private fun String.isLoopback(): Boolean = startsWith("127.")
+
 class Socks5Server(
     val port: Int = AirTunConfig.DEFAULT_SOCKS_PORT,
     var pinCode: String = "",
     var pinRequired: Boolean = true,
+    /** LAN IPv4 (e.g. hotspot ap0 address). When set, the listener binds THIS address
+     *  instead of the wildcard, so SYN-ACKs leave via the hotspot NIC even while a
+     *  VPN tunnel is capturing all UIDs — fixes "Web Proxy/TUN connect timeout". */
+    val lanAddress: InetAddress? = null,
     private val upstreamContext: Context? = null,
     private val bindSocket: ((Socket) -> Boolean)? = null,
     private val bindDatagramSocket: ((DatagramSocket) -> Boolean)? = null,
     private val onTraffic: (bytesUp: Long, bytesDown: Long) -> Unit,
     private val onClientCountChanged: (count: Int) -> Unit,
     private val onLog: (message: String) -> Unit = {},
+    /** Fired when a LAN client's TCP connect succeeded but the SOCKS handshake
+     *  never completed while a VPN tunnel is capturing this app — the signature of
+     *  "VPN app is proxying AirTun itself" (fix: exclude AirTun in the VPN app). */
+    private val onVpnCaptureSuspected: (() -> Unit)? = null,
 ) {
     companion object {
         private const val TAG = "AirTun-Socks5"
@@ -90,7 +101,12 @@ class Socks5Server(
             try {
                 val s = ServerSocket()
                 s.reuseAddress = true
-                s.bind(InetSocketAddress(candidate))
+                // Bind to the hotspot IP when available: replies then egress ap0 and a
+                // VPN tunnel cannot hijack the handshake (root cause of connect timeout).
+                s.bind(
+                    if (lanAddress != null) InetSocketAddress(lanAddress, candidate)
+                    else InetSocketAddress(candidate)
+                )
                 server = s
                 boundPort = candidate
                 if (candidate != port) {
@@ -148,6 +164,24 @@ class Socks5Server(
         activeClients.computeIfAbsent(clientIp) { AtomicInteger(0) }.incrementAndGet()
         onClientCountChanged(activeClients.size)
 
+        // VPN-capture watchdog: if this is a LAN (non-loopback) client whose TCP
+        // connect succeeded but no SOCKS greeting arrives within 5s while a VPN
+        // tunnel is active, the VPN is almost certainly proxying AirTun's own
+        // traffic — the handshake reply was swallowed by the tunnel.
+        var handshakeDone = false
+        if (clientIp != "unknown" && !clientIp.isLoopback() && upstreamContext != null &&
+            VpnStatus.isVpnActive(upstreamContext)
+        ) {
+            scope.launch {
+                kotlinx.coroutines.delay(5_000)
+                if (!handshakeDone && activeConnections.get() > 0) {
+                    Log.w(TAG, "Handshake stall from $clientIp with VPN active — VPN capture suspected")
+                    onLog("Client connected but handshake stalled — your VPN may be capturing AirTun (exclude AirTun in VPN per-app settings)")
+                    onVpnCaptureSuspected?.invoke()
+                }
+            }
+        }
+
         var clientIn: InputStream? = null
         var clientOut: OutputStream? = null
 
@@ -162,6 +196,7 @@ class Socks5Server(
             val dataOut = DataOutputStream(clientOut)
 
             val version = dataIn.readUnsignedByte()
+            handshakeDone = true
             if (version != 0x05) {
                 Log.w(TAG, "Invalid SOCKS version: $version from $clientIp")
                 return

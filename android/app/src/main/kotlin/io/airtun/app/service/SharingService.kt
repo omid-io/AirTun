@@ -37,6 +37,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.DatagramSocket
+import java.net.InetAddress
 
 class SharingService : Service() {
 
@@ -129,6 +130,9 @@ class SharingService : Service() {
                 port = AirTunConfig.DEFAULT_SOCKS_PORT,
                 pinCode = pin,
                 pinRequired = true,
+                lanAddress = host?.let {
+                    runCatching { InetAddress.getByName(it) }.getOrNull()
+                },
                 upstreamContext = applicationContext,
                 bindSocket = { socket ->
                     VpnStatus.bindSocketToUpstream(applicationContext, socket)
@@ -149,6 +153,9 @@ class SharingService : Service() {
                 },
                 onLog = { msg ->
                     LocalLog.add(msg)
+                },
+                onVpnCaptureSuspected = {
+                    ConnectionRepository.setWarning(WarningCode.VPN_CAPTURES_LOCAL, true)
                 },
             )
             server.start()

@@ -37,7 +37,7 @@
     <string name="warning_no_vpn_title">No VPN Active on Phone</string>
     <string name="warning_no_vpn_body">You are sharing your direct mobile connection. If you want to tunnel through a VPN, turn it on first.</string>
     <string name="warning_vpn_captures_title">VPN Routing Alert</string>
-    <string name="warning_vpn_captures_body">Your phone\'s VPN might intercept local traffic. If Windows cannot connect, allow local LAN bypass in your VPN app.</string>
+    <string name="warning_vpn_captures_body">A client connected but the handshake stalled — your VPN app is capturing AirTun traffic. Fix: open your VPN app (v2rayNG/Hiddify) → Settings → Per-app proxy → set mode to Exclude → enable AirTun. Then reconnect.</string>
 
     <!-- Advanced -->
     <string name="advanced">Network &amp; Diagnostics</string>
