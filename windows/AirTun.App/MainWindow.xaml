@@ -4,10 +4,15 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <Grid x:Name="Root" Background="{StaticResource WindowSolidBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="58" />
+        </Grid.ColumnDefinitions>
+        <!-- Main area (title bar spans full width visually via separate row inside col 0/1) -->
+        <Grid Grid.ColumnSpan="2">
         <Grid.RowDefinitions>
             <RowDefinition Height="44" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="64" />
         </Grid.RowDefinitions>
 
         <!-- Custom Seamless Dark TitleBar -->
@@ -326,7 +331,37 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- TAB 2: ROUTING -->
+            <!-- TAB 2: DNS -->
+            <ScrollViewer x:Name="ViewTabDns" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="DNS Servers" FontSize="20" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
+                        <TextBlock Text="Choose which resolver the tunnel and Windows use" FontSize="12" Foreground="{StaticResource LabelSecondary}" />
+                    </StackPanel>
+                    <Border CornerRadius="14" Padding="14,10" Background="{StaticResource FillSunken}" BorderBrush="{StaticResource NmSunkenBorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="DNS engine coming online in the next build — server list, latency tests and bypass checks are being wired to airtun-tun." FontSize="12" Foreground="{StaticResource LabelSecondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- TAB 3: AI ACCESS -->
+            <ScrollViewer x:Name="ViewTabAiAccess" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="3">
+                        <TextBlock Text="AI Access" FontSize="20" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
+                        <TextBlock Text="Diagnose and fix 403 blocks on Gemini / ChatGPT / Claude" FontSize="12" Foreground="{StaticResource LabelSecondary}" />
+                    </StackPanel>
+                    <Border CornerRadius="14" Padding="14,10" Background="{StaticResource FillSunken}" BorderBrush="{StaticResource NmSunkenBorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Diagnostics (IPv6 leak test, exit-IP reputation check, AI-domain routing rules) land in the next build." FontSize="12" Foreground="{StaticResource LabelSecondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- TAB 4: ROUTING -->
             <ScrollViewer x:Name="ViewTabRouting" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
                 <StackPanel Spacing="14">
                     <StackPanel Spacing="3">
@@ -414,7 +449,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- TAB 3: LOGS -->
+            <!-- TAB 5: LOGS -->
             <Grid x:Name="ViewTabLogs" Visibility="Collapsed">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -446,7 +481,7 @@
                 </Border>
             </Grid>
 
-            <!-- TAB 4: SETTINGS & ABOUT -->
+            <!-- TAB 6: SETTINGS & ABOUT -->
             <ScrollViewer x:Name="ViewTabAbout" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
                 <StackPanel Spacing="14">
 
@@ -520,76 +555,83 @@
 
         </Grid>
 
-        <!-- BOTTOM NAVIGATION BAR (Order: Settings | Logs | Routing | Connect) -->
-        <Border Grid.Row="2" Background="{StaticResource NmCardBrush}" BorderBrush="{StaticResource NmBorderBrush}" BorderThickness="0,1,0,0">
-            <Grid Padding="12,8,12,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <!-- Col 0: Settings -->
-                <Border Grid.Column="0" x:Name="NavPillAbout" CornerRadius="12" Background="Transparent" Margin="2,0">
-                    <Button x:Name="NavBtnAbout" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0" Click="NavBtnAbout_Click">
-                        <StackPanel Spacing="3" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <!-- RIGHT RAIL NAVIGATION (Order top→bottom: Connect | DNS | AI | Routing | Logs | Settings) -->
+        <Border Grid.Column="1" Background="{StaticResource NmCardBrush}" BorderBrush="{StaticResource NmBorderBrush}" BorderThickness="1,0,0,0">
+            <StackPanel VerticalAlignment="Top" Spacing="4" Padding="6,12,6,8">
+                <!-- Connect -->
+                <Button x:Name="NavBtnConnect" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="0,6" Click="NavBtnConnect_Click">
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <Path x:Name="NavIconConnect"
+                              Data="M13 2L3 14 12 14 11 22 21 10 12 10 13 2Z"
+                              Width="19" Height="19" Stretch="Uniform"
+                              Fill="Transparent" Stroke="{StaticResource AccentBrush}" StrokeThickness="2"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="NavTextConnect" Text="Connect" FontSize="10" FontWeight="ExtraBold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <!-- DNS -->
+                <Button x:Name="NavBtnDns" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="0,6" Click="NavBtnDns_Click">
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <Path x:Name="NavIconDns"
+                              Data="M12 2A10 10 0 1 0 22 12 M2 12h20 M12 2a15.3 15.3 0 0 1 0 20 M12 2a15.3 15.3 0 0 0 0 20"
+                              Width="18" Height="18" Stretch="Uniform"
+                              Fill="Transparent" Stroke="{StaticResource LabelSecondary}" StrokeThickness="1.8"
+                              StrokeLineJoin="Round" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="NavTextDns" Text="DNS" FontSize="10" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <!-- AI Access -->
+                <Button x:Name="NavBtnAi" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="0,6" Click="NavBtnAi_Click">
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <Path x:Name="NavIconAi"
+                              Data="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17h-8v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7z M9 21h6"
+                              Width="18" Height="18" Stretch="Uniform"
+                              Fill="Transparent" Stroke="{StaticResource LabelSecondary}" StrokeThickness="1.8"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="NavTextAi" Text="AI" FontSize="10" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <!-- Routing -->
+                <Button x:Name="NavBtnRouting" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="0,6" Click="NavBtnRouting_Click">
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <Path x:Name="NavIconRouting"
+                              Data="M6 3L6 15 M21 6A3 3 0 1 0 15 6A3 3 0 1 0 21 6 M9 18A3 3 0 1 0 3 18A3 3 0 1 0 9 18 M18 9a9 9 0 0 1-9 9"
+                              Width="18" Height="18" Stretch="Uniform"
+                              Fill="Transparent" Stroke="{StaticResource LabelSecondary}" StrokeThickness="1.8"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="NavTextRouting" Text="Routing" FontSize="10" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <!-- Logs -->
+                <Button x:Name="NavBtnLogs" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="0,6" Click="NavBtnLogs_Click">
+                    <StackPanel Spacing="3" HorizontalAlignment="Center">
+                        <Path x:Name="NavIconLogs"
+                              Data="M4 17L10 11L4 5 M12 19L20 19"
+                              Width="18" Height="18" Stretch="Uniform"
+                              Fill="Transparent" Stroke="{StaticResource LabelSecondary}" StrokeThickness="1.8"
+                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="NavTextLogs" Text="Logs" FontSize="10" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <!-- Settings (pushed to bottom via spacer) -->
+                <StackPanel VerticalAlignment="Bottom" Spacing="4">
+                    <Button x:Name="NavBtnAbout" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="0,6" Click="NavBtnAbout_Click">
+                        <StackPanel Spacing="3" HorizontalAlignment="Center">
                             <Path x:Name="NavIconAbout"
                                   Data="M15 12A3 3 0 1 0 9 12A3 3 0 1 0 15 12Z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-                                  Width="19" Height="19" Stretch="Uniform"
+                                  Width="18" Height="18" Stretch="Uniform"
                                   Fill="Transparent" Stroke="{StaticResource LabelSecondary}" StrokeThickness="1.8"
                                   StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                   HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="NavTextAbout" Text="Settings" FontSize="11" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="NavTextAbout" Text="Settings" FontSize="10" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                </Border>
-
-                <!-- Col 1: Logs -->
-                <Border Grid.Column="1" x:Name="NavPillLogs" CornerRadius="12" Background="Transparent" Margin="2,0">
-                    <Button x:Name="NavBtnLogs" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0" Click="NavBtnLogs_Click">
-                        <StackPanel Spacing="3" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Path x:Name="NavIconLogs"
-                                  Data="M4 17L10 11L4 5 M12 19L20 19"
-                                  Width="19" Height="19" Stretch="Uniform"
-                                  Fill="Transparent" Stroke="{StaticResource LabelSecondary}" StrokeThickness="2"
-                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="NavTextLogs" Text="Logs" FontSize="11" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </Border>
-
-                <!-- Col 2: Routing -->
-                <Border Grid.Column="2" x:Name="NavPillRouting" CornerRadius="12" Background="Transparent" Margin="2,0">
-                    <Button x:Name="NavBtnRouting" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0" Click="NavBtnRouting_Click">
-                        <StackPanel Spacing="3" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Path x:Name="NavIconRouting"
-                                  Data="M6 3L6 15 M21 6A3 3 0 1 0 15 6A3 3 0 1 0 21 6 M9 18A3 3 0 1 0 3 18A3 3 0 1 0 9 18 M18 9a9 9 0 0 1-9 9"
-                                  Width="19" Height="19" Stretch="Uniform"
-                                  Fill="Transparent" Stroke="{StaticResource LabelSecondary}" StrokeThickness="2"
-                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="NavTextRouting" Text="Routing" FontSize="11" Foreground="{StaticResource LabelSecondary}" HorizontalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </Border>
-
-                <!-- Col 3: Connect (Primary / Home) -->
-                <Border Grid.Column="3" x:Name="NavPillConnect" CornerRadius="12" Background="{StaticResource FillSunken}" BorderBrush="{StaticResource NmSunkenBorderBrush}" BorderThickness="1" Margin="2,0">
-                    <Button x:Name="NavBtnConnect" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Padding="0" Click="NavBtnConnect_Click">
-                        <StackPanel Spacing="3" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <Path x:Name="NavIconConnect"
-                                  Data="M13 2L3 14 12 14 11 22 21 10 12 10 13 2Z"
-                                  Width="19" Height="19" Stretch="Uniform"
-                                  Fill="Transparent" Stroke="{StaticResource AccentBrush}" StrokeThickness="2"
-                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                  HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="NavTextConnect" Text="Connect" FontSize="11" FontWeight="ExtraBold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </Border>
-            </Grid>
+                </StackPanel>
+            </StackPanel>
         </Border>
 
     </Grid>

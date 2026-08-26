@@ -697,66 +697,81 @@ public sealed partial class MainWindow : Window
     private void SelectTab(int tabIndex)
     {
         ViewTabConnect.Visibility = tabIndex == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ViewTabRouting.Visibility = tabIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
-        ViewTabLogs.Visibility = tabIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
-        ViewTabAbout.Visibility = tabIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+        ViewTabDns.Visibility = tabIndex == 1 ? Visibility.Visible : Visibility.Collapsed;
+        ViewTabAiAccess.Visibility = tabIndex == 2 ? Visibility.Visible : Visibility.Collapsed;
+        ViewTabRouting.Visibility = tabIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+        ViewTabLogs.Visibility = tabIndex == 4 ? Visibility.Visible : Visibility.Collapsed;
+        ViewTabAbout.Visibility = tabIndex == 5 ? Visibility.Visible : Visibility.Collapsed;
 
         var accent = (SolidColorBrush)Application.Current.Resources["AccentBrush"];
         var muted = (SolidColorBrush)Application.Current.Resources["LabelSecondary"];
-        var sunken = (Brush)Application.Current.Resources["FillSunken"];
-        var sunkenBorder = (Brush)Application.Current.Resources["NmSunkenBorderBrush"];
-        var transparent = new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
 
         NavTextConnect.Foreground = tabIndex == 0 ? accent : muted;
-        NavTextRouting.Foreground = tabIndex == 1 ? accent : muted;
-        NavTextLogs.Foreground = tabIndex == 2 ? accent : muted;
-        NavTextAbout.Foreground = tabIndex == 3 ? accent : muted;
+        NavTextDns.Foreground = tabIndex == 1 ? accent : muted;
+        NavTextAi.Foreground = tabIndex == 2 ? accent : muted;
+        NavTextRouting.Foreground = tabIndex == 3 ? accent : muted;
+        NavTextLogs.Foreground = tabIndex == 4 ? accent : muted;
+        NavTextAbout.Foreground = tabIndex == 5 ? accent : muted;
 
         NavTextConnect.FontWeight = tabIndex == 0 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
-        NavTextRouting.FontWeight = tabIndex == 1 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
-        NavTextLogs.FontWeight = tabIndex == 2 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
-        NavTextAbout.FontWeight = tabIndex == 3 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
+        NavTextDns.FontWeight = tabIndex == 1 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
+        NavTextAi.FontWeight = tabIndex == 2 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
+        NavTextRouting.FontWeight = tabIndex == 3 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
+        NavTextLogs.FontWeight = tabIndex == 4 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
+        NavTextAbout.FontWeight = tabIndex == 5 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
 
         // Sunken active pill containers matching HTML
         NavPillConnect.Background = tabIndex == 0 ? sunken : transparent;
         NavPillConnect.BorderBrush = tabIndex == 0 ? sunkenBorder : transparent;
         NavPillConnect.BorderThickness = new Thickness(tabIndex == 0 ? 1 : 0);
 
-        NavPillRouting.Background = tabIndex == 1 ? sunken : transparent;
-        NavPillRouting.BorderBrush = tabIndex == 1 ? sunkenBorder : transparent;
-        NavPillRouting.BorderThickness = new Thickness(tabIndex == 1 ? 1 : 0);
+        NavPillDns.Background = tabIndex == 1 ? sunken : transparent;
+        NavPillDns.BorderBrush = tabIndex == 1 ? sunkenBorder : transparent;
+        NavPillDns.BorderThickness = new Thickness(tabIndex == 1 ? 1 : 0);
 
-        NavPillLogs.Background = tabIndex == 2 ? sunken : transparent;
-        NavPillLogs.BorderBrush = tabIndex == 2 ? sunkenBorder : transparent;
-        NavPillLogs.BorderThickness = new Thickness(tabIndex == 2 ? 1 : 0);
+        NavPillAi.Background = tabIndex == 2 ? sunken : transparent;
+        NavPillAi.BorderBrush = tabIndex == 2 ? sunkenBorder : transparent;
+        NavPillAi.BorderThickness = new Thickness(tabIndex == 2 ? 1 : 0);
 
-        NavPillAbout.Background = tabIndex == 3 ? sunken : transparent;
-        NavPillAbout.BorderBrush = tabIndex == 3 ? sunkenBorder : transparent;
-        NavPillAbout.BorderThickness = new Thickness(tabIndex == 3 ? 1 : 0);
+        NavPillRouting.Background = tabIndex == 3 ? sunken : transparent;
+        NavPillRouting.BorderBrush = tabIndex == 3 ? sunkenBorder : transparent;
+        NavPillRouting.BorderThickness = new Thickness(tabIndex == 3 ? 1 : 0);
+
+        NavPillLogs.Background = tabIndex == 4 ? sunken : transparent;
+        NavPillLogs.BorderBrush = tabIndex == 4 ? sunkenBorder : transparent;
+        NavPillLogs.BorderThickness = new Thickness(tabIndex == 4 ? 1 : 0);
+
+        NavPillAbout.Background = tabIndex == 5 ? sunken : transparent;
+        NavPillAbout.BorderBrush = tabIndex == 5 ? sunkenBorder : transparent;
+        NavPillAbout.BorderThickness = new Thickness(tabIndex == 5 ? 1 : 0);
 
         // SVG icon stroke color — active = cyan, inactive = muted
         NavIconConnect.Stroke = tabIndex == 0 ? accent : muted;
-        NavIconRouting.Stroke = tabIndex == 1 ? accent : muted;
-        NavIconLogs.Stroke = tabIndex == 2 ? accent : muted;
-        NavIconAbout.Stroke = tabIndex == 3 ? accent : muted;
+        NavIconDns.Stroke = tabIndex == 1 ? accent : muted;
+        NavIconAi.Stroke = tabIndex == 2 ? accent : muted;
+        NavIconRouting.Stroke = tabIndex == 3 ? accent : muted;
+        NavIconLogs.Stroke = tabIndex == 4 ? accent : muted;
+        NavIconAbout.Stroke = tabIndex == 5 ? accent : muted;
 
-        if (tabIndex == 2)
-        {
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                if (_autoScrollEnabled)
+        if (tabIndex == 4)
                 {
-                    ScrollLogs.UpdateLayout();
-                    ScrollLogs.ChangeView(null, ScrollLogs.ScrollableHeight, null, disableAnimation: true);
+                    DispatcherQueue.TryEnqueue(() =>
+                    {
+                        if (_autoScrollEnabled)
+                        {
+                            ScrollLogs.UpdateLayout();
+                            ScrollLogs.ChangeView(null, ScrollLogs.ScrollableHeight, null, disableAnimation: true);
+                        }
+                    });
                 }
-            });
-        }
-    }
+            }
 
-    private void NavBtnConnect_Click(object sender, RoutedEventArgs e) => SelectTab(0);
-    private void NavBtnRouting_Click(object sender, RoutedEventArgs e) => SelectTab(1);
-    private void NavBtnLogs_Click(object sender, RoutedEventArgs e) => SelectTab(2);
-    private void NavBtnAbout_Click(object sender, RoutedEventArgs e) => SelectTab(3);
+            private void NavBtnConnect_Click(object sender, RoutedEventArgs e) => SelectTab(0);
+            private void NavBtnDns_Click(object sender, RoutedEventArgs e) => SelectTab(1);
+            private void NavBtnAi_Click(object sender, RoutedEventArgs e) => SelectTab(2);
+            private void NavBtnRouting_Click(object sender, RoutedEventArgs e) => SelectTab(3);
+            private void NavBtnLogs_Click(object sender, RoutedEventArgs e) => SelectTab(4);
+            private void NavBtnAbout_Click(object sender, RoutedEventArgs e) => SelectTab(5);
 
     private void CardModeTun_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
