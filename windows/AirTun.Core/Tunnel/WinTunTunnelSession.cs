@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Pipes;
+using AirTun.Core.Resolvers;
 
 namespace AirTun.Core.Tunnel;
 
@@ -46,6 +47,11 @@ public sealed class WinTunTunnelSession(WinTunTunnelSession.IProcessHost process
         try
         {
             var args = $"-proxy socks5://airtun:{pinCode}@{host}:{port} -tun-name AirTun -tun-addr 10.254.1.2/24";
+            // Forward the user-selected DoH endpoint so the tunnel's DNS forwarder
+            // resolves through the chosen resolver (DNS tab selection), not a fixed one.
+            var doh = DnsSelectionStore.GetActiveDohUrl();
+            if (!string.IsNullOrWhiteSpace(doh))
+                args += $" -doh \"{doh}\"";
             tunnel = processHost.Start(args);
         }
         catch (ElevationDeclined)

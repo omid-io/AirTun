@@ -28,6 +28,7 @@ func main() {
 	tunNameFlag := flag.String("tun-name", "AirTun", "TUN interface name")
 	tunAddrFlag := flag.String("tun-addr", "10.254.1.2/24", "TUN interface address")
 	pipeFlag := flag.String("pipe", "", "Named pipe name for parent IPC")
+	dohFlag := flag.String("doh", "", "DoH endpoint for the local DNS forwarder (e.g. https://dns.403.online/dns-query); empty = default 1.1.1.1")
 	flag.Parse()
 
 	if *proxyFlag == "" {
@@ -117,7 +118,7 @@ func main() {
 	}
 
 	// 4. Start local DNS Forwarder over SOCKS5 TCP
-	dnsStop, err := startDNSForwarder(tunIP+":53", proxyUrl)
+	dnsStop, err := startDNSForwarder(tunIP+":53", proxyUrl, *dohFlag)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to start local DNS forwarder: %v\n", err)
 	}
@@ -164,7 +165,7 @@ func main() {
 	}
 }
 
-func startDNSForwarder(listenAddr string, proxyUrl *url.URL) (func(), error) {
+func startDNSForwarder(listenAddr string, proxyUrl *url.URL, dohEndpoint string) (func(), error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", listenAddr)
 	if err != nil {
 		return nil, err
@@ -219,8 +220,12 @@ func startDNSForwarder(listenAddr string, proxyUrl *url.URL) (func(), error) {
 			copy(query, buf[:n])
 
 			go func(q []byte, cAddr *net.UDPAddr) {
-				// 1. Primary: Cloudflare DNS-over-HTTPS (Port 443 via SOCKS5)
-				resp, err := queryDoH(httpClient, "https://1.1.1.1/dns-query", q)
+				// 1. Primary: user-selected DoH endpoint (DNS tab) — default Cloudflare
+				endpoint := dohEndpoint
+				if endpoint == "" {
+					endpoint = "https://1.1.1.1/dns-query"
+				}
+				resp, err := queryDoH(httpClient, endpoint, q)
 				if err != nil || len(resp) == 0 {
 					// 2. Secondary: Google DNS-over-HTTPS (Port 443 via SOCKS5)
 					resp, err = queryDoH(httpClient, "https://8.8.8.8/dns-query", q)
