@@ -795,6 +795,7 @@ public sealed partial class MainWindow : Window
     private string _dnsActiveId = "builtin-system";
     private string? _pendingDnsId;          // row clicked but Set not yet pressed
     private readonly Dictionary<string, TextBlock> _latencyCells = new();
+    private readonly Dictionary<string, (int ms, bool ok)> _lastResults = new();
     private readonly Dictionary<string, DnsServer> _rowServers = new();
 
     private void LoadDnsTab()
@@ -864,17 +865,42 @@ public sealed partial class MainWindow : Window
                                           : (Brush)Application.Current.Resources["LabelPrimary"] };
                 Grid.SetColumn(name, 1);
 
-                var addrText = s.Kind switch
+                // Flag badges under the name: AI recommendation / outage-proof
+                var flagStack = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new Thickness(9, 2, 0, 0) };
+                if (s.AiFlag)
+                    flagStack.Children.Add(new Border { Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 229, 255)),
+                        CornerRadius = new CornerRadius(4), Padding = new Thickness(5, 1, 5, 1),
+                        Child = new TextBlock { Text = "AI", FontSize = 8, FontWeight = Microsoft.UI.Text.FontWeights.Black, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 0, 35, 44)) } });
+                if (s.OutageProof)
+                    flagStack.Children.Add(new Border { Background = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 52, 211, 153)),
+                        CornerRadius = new CornerRadius(4), Padding = new Thickness(5, 1, 5, 1),
+                        Child = new TextBlock { Text = Strings.IsPersian ? "قطع‌پذیر" : "OUTAGE-OK", FontSize = 8, FontWeight = Microsoft.UI.Text.FontWeights.Black, Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 6, 40, 28)) } });
+                var nameCol = new StackPanel { Spacing = 0 };
+                nameCol.Children.Add(name);
+                if (flagStack.Children.Count > 0)
+                    nameCol.Children.Add(flagStack);
+                Grid.SetColumn(nameCol, 1);
+
+                var addrStack = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
+                if (s.Kind == "system")
                 {
-                    "system" => "OS default",
-                    "doh" => s.DohUrl ?? "",
-                    _ => s.Primary + (string.IsNullOrEmpty(s.Secondary) ? "" : $" / {s.Secondary}")
-                };
-                var addr = new TextBlock { Text = addrText, FontSize = 10, FontFamily = new FontFamily("Consolas"),
-                    Foreground = (Brush)Application.Current.Resources["LabelSecondary"],
-                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0),
-                    TextTrimming = TextTrimming.CharacterEllipsis };
-                Grid.SetColumn(addr, 2);
+                    addrStack.Children.Add(new TextBlock { Text = "OS default", FontSize = 10, FontFamily = new FontFamily("Consolas"),
+                        Foreground = (Brush)Application.Current.Resources["LabelSecondary"] });
+                }
+                else if (s.Kind == "doh")
+                {
+                    addrStack.Children.Add(new TextBlock { Text = s.DohUrl ?? "", FontSize = 10, FontFamily = new FontFamily("Consolas"),
+                        Foreground = (Brush)Application.Current.Resources["LabelSecondary"], TextTrimming = TextTrimming.CharacterEllipsis });
+                }
+                else
+                {
+                    addrStack.Children.Add(new TextBlock { Text = s.Primary, FontSize = 10, FontFamily = new FontFamily("Consolas"),
+                        Foreground = (Brush)Application.Current.Resources["LabelSecondary"] });
+                    if (!string.IsNullOrEmpty(s.Secondary))
+                        addrStack.Children.Add(new TextBlock { Text = s.Secondary, FontSize = 10, FontFamily = new FontFamily("Consolas"),
+                            Foreground = (Brush)Application.Current.Resources["LabelSecondary"] });
+                }
+                Grid.SetColumn(addrStack, 2);
 
                 var lat = new TextBlock { FontSize = 10, FontFamily = new FontFamily("Consolas"),
                     HorizontalAlignment = Microsoft.UI.Xaml.HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
@@ -884,10 +910,19 @@ public sealed partial class MainWindow : Window
                     lat.Text = "✓";
                     lat.Foreground = (Brush)Application.Current.Resources["AccentBrush"];
                 }
+                if (_lastResults.TryGetValue(s.Id, out var last))
+                {
+                    lat.Text = last.ok ? $"{last.ms} ms" : "✗";
+                    lat.Foreground = new SolidColorBrush(last.ok
+                        ? (last.ms < 80 ? Windows.UI.Color.FromArgb(255, 52, 211, 153)
+                          : last.ms < 200 ? Windows.UI.Color.FromArgb(255, 251, 191, 36)
+                          : Windows.UI.Color.FromArgb(255, 248, 113, 113))
+                        : Windows.UI.Color.FromArgb(255, 248, 113, 113));
+                }
                 Grid.SetColumn(lat, 3);
                 _latencyCells[s.Id] = lat;
 
-                row.Children.Add(radio); row.Children.Add(name); row.Children.Add(addr); row.Children.Add(lat);
+                row.Children.Add(radio); row.Children.Add(name); row.Children.Add(addrStack); row.Children.Add(lat);
                 row.PointerPressed += (_, _) => { _pendingDnsId = s.Id; RenderDnsGroups(); };
                 _rowServers[s.Id] = s;
 
@@ -924,18 +959,12 @@ public sealed partial class MainWindow : Window
         BtnTestAllDns.IsEnabled = false;
         foreach (var kv in _latencyCells) { kv.Value.Text = "…"; kv.Value.Foreground = (Brush)Application.Current.Resources["LabelSecondary"]; }
 
-        var tasks = _rowServers.Select(async kv =>
+        // Sequential testing (top to bottom) so results appear in list order.
+        foreach (var kv in _rowServers)
         {
+            if (!_latencyCells.TryGetValue(kv.Key, out var cell)) continue;
             var res = await DnsTester.TestAsync(kv.Value);
-            return (kv.Key, res);
-        }).ToList();
-
-        while (tasks.Count > 0)
-        {
-            var done = await Task.WhenAny(tasks);
-            tasks.Remove(done);
-            var (id, res) = await done;
-            if (!_latencyCells.TryGetValue(id, out var cell)) continue;
+            _lastResults[kv.Key] = (res.LatencyMs, res.Success);
             if (res.Success)
             {
                 cell.Text = $"{res.LatencyMs} ms";
@@ -944,7 +973,7 @@ public sealed partial class MainWindow : Window
                                                                      : Windows.UI.Color.FromArgb(255, 248, 113, 113));
             }
             else { cell.Text = "✗"; cell.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 248, 113, 113)); }
-            if (id == _dnsActiveId) TextActiveLatency.Text = res.Success ? $"{res.LatencyMs} ms" : "✗";
+            if (kv.Key == _dnsActiveId) TextActiveLatency.Text = res.Success ? $"{res.LatencyMs} ms" : "✗";
         }
         BtnTestAllDns.IsEnabled = true;
     }
@@ -997,6 +1026,13 @@ public sealed partial class MainWindow : Window
     }
 
     private static Brush TransparentBrush() => new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+
+    private static StackPanel wrapNameOnly(TextBlock name)
+    {
+        var p = new StackPanel { Spacing = 0 };
+        p.Children.Add(name);
+        return p;
+    }
 
     private void BtnAddDns_Click(object sender, RoutedEventArgs e)
     {
@@ -1261,6 +1297,7 @@ public sealed partial class MainWindow : Window
     {
         Strings.IsPersian = !Strings.IsPersian;
         ApplyStrings();
+        if (ViewTabDns.Visibility == Visibility.Visible) { RenderDnsGroups(); RefreshActiveCard(); }
     }
 
     private async void BtnCopyLogs_Click(object sender, RoutedEventArgs e)

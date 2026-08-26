@@ -335,7 +335,7 @@
                     </StackPanel>
 
                     <!-- ACTIVE CARD -->
-                    <Border CornerRadius="14" Padding="13,11" BorderThickness="1.5"
+                    <Border CornerRadius="16" Padding="18,18" BorderThickness="1.5"
                             Background="#1700E5FF" BorderBrush="{StaticResource AccentBrush}">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -343,9 +343,9 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="10"
+                            <Border Grid.Column="0" Width="46" Height="46" CornerRadius="12"
                                     Background="#2600E5FF">
-                                <TextBlock Text="DNS" FontSize="12" FontWeight="Black" Foreground="{StaticResource AccentBrush}"
+                                <TextBlock Text="DNS" FontSize="14" FontWeight="Black" Foreground="{StaticResource AccentBrush}"
                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <StackPanel Grid.Column="1" Margin="11,0,6,0" VerticalAlignment="Center" Spacing="2">

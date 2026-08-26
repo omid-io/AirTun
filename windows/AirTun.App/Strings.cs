@@ -21,7 +21,7 @@ public static class Strings
     public static string TabLogs => _isPersian ? "گزارش‌ها" : "Logs";
     public static string TabAbout => _isPersian ? "تنظیمات" : "Settings";
     public static string TabDns => _isPersian ? "DNS" : "DNS";
-    public static string TabAi => _isPersian ? "هوش مصنوعی" : "AI";
+    public static string TabAi => "AI";
 
     public static string DnsTitle => _isPersian ? "سرورهای DNS" : "DNS Servers";
     public static string DnsSubtitle => _isPersian ? "ریزولور انتخابی برای تونل و ویندوز" : "Choose which resolver the tunnel and Windows use";

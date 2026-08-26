@@ -18,6 +18,10 @@ public sealed class DnsServer
     [JsonPropertyName("dohUrl")] public string? DohUrl { get; set; }
     /// <summary>Built-ins cannot be deleted/renamed by the user.</summary>
     [JsonPropertyName("builtIn")] public bool BuiltIn { get; set; }
+    /// <summary>Recommended for Gemini/ChatGPT access.</summary>
+    [JsonPropertyName("aiFlag")] public bool AiFlag { get; set; }
+    /// <summary>Private-IP range inside Iran — keeps working during international outages.</summary>
+    [JsonPropertyName("outageProof")] public bool OutageProof { get; set; }
 
     public override string ToString() => $"{Label} ({Primary})";
 }
@@ -50,14 +54,14 @@ public static class DnsStore
         // ── Iranian anti-sanction resolvers (verified live 2026-08) ──
         // 403.online — best community reputation for ChatGPT/Gemini; private 10.x range works during outages.
         // NOTE: its claimed DoH host did not resolve (2026-08) — UDP only.
-        new() { Id="builtin-403",      Label="403.online", Kind="udp", Primary="10.202.10.202", Secondary="10.202.10.102", BuiltIn=true },
+        new() { Id="builtin-403",      Label="403.online", Kind="udp", Primary="10.202.10.202", Secondary="10.202.10.102", BuiltIn=true, AiFlag=true, OutageProof=true },
         new() { Id="builtin-shecan",   Label="Shecan", Kind="udp", Primary="178.22.122.100", Secondary="185.51.200.2",
                DohUrl="https://free.shecan.ir/dns-query", BuiltIn=true },
         new() { Id="builtin-electro",  Label="Electro", Kind="udp", Primary="78.157.42.100", Secondary="78.157.42.101", BuiltIn=true },
-        new() { Id="builtin-radar",    Label="Radar Game", Kind="udp", Primary="10.202.10.10", Secondary="10.202.10.11", BuiltIn=true },
+        new() { Id="builtin-radar",    Label="Radar Game", Kind="udp", Primary="10.202.10.10", Secondary="10.202.10.11", BuiltIn=true, OutageProof=true },
         // Vanilla — AI + gaming focus; public IPs verified live (private range also exists).
         new() { Id="builtin-vanilla",  Label="Vanilla", Kind="udp", Primary="194.146.68.68", Secondary="194.146.68.40",
-               DohUrl="https://dns.vanillapp.ir/dns-query", BuiltIn=true },
+               DohUrl="https://dns.vanillapp.ir/dns-query", BuiltIn=true, AiFlag=true },
         // Beshkan — Nvidia/Intel/AMD/Steam unblocking; DoT: free.beshkanapp.ir
         new() { Id="builtin-beshkan",  Label="Beshkan", Kind="udp", Primary="181.41.194.177", Secondary="181.41.194.186", BuiltIn=true },
         // Shelter — gaming/general, live-verified
