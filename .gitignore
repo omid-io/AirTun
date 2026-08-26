@@ -50,3 +50,4 @@ GEMINI.md
 .hermes/
 crash.log
 *.log.tmp
+windows/AirTun.App/tmpdiag/
