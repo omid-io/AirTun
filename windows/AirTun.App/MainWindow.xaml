@@ -346,9 +346,36 @@
                         <TextBlock Text="AI Access" FontSize="20" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
                         <TextBlock Text="Diagnose and fix 403 blocks on Gemini / ChatGPT / Claude" FontSize="12" Foreground="{StaticResource LabelSecondary}" />
                     </StackPanel>
-                    <Border CornerRadius="14" Padding="14,10" Background="{StaticResource FillSunken}" BorderBrush="{StaticResource NmSunkenBorderBrush}" BorderThickness="1">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Diagnostics (IPv6 leak test, exit-IP reputation check, AI-domain routing rules) land in the next build." FontSize="12" Foreground="{StaticResource LabelSecondary}" TextWrapping="Wrap"/>
+
+                    <!-- IPv6 Leak Test -->
+                    <Border CornerRadius="14" Padding="16,12" Background="{StaticResource NmCardBrush}" BorderBrush="{StaticResource NmBorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="6">
+                            <Grid>
+                                <TextBlock Text="IPv6 Leak Test" FontSize="14" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
+                                <Button x:Name="BtnIpv6Test" Content="Run test" HorizontalAlignment="Right" Padding="12,5"
+                                        Style="{StaticResource SecondaryButton}" Click="BtnIpv6Test_Click" />
+                            </Grid>
+                            <TextBlock x:Name="TextIpv6Result" Text="Checks whether AAAA (IPv6) traffic escapes the tunnel — the #1 hidden cause of Google 403s." FontSize="11.5" Foreground="{StaticResource LabelSecondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Exit IP Reputation -->
+                    <Border CornerRadius="14" Padding="16,12" Background="{StaticResource NmCardBrush}" BorderBrush="{StaticResource NmBorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="6">
+                            <Grid>
+                                <TextBlock Text="Exit IP Check" FontSize="14" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
+                                <Button x:Name="BtnIpRep" Content="Check IP" HorizontalAlignment="Right" Padding="12,5"
+                                        Style="{StaticResource SecondaryButton}" Click="BtnIpRep_Click" />
+                            </Grid>
+                            <TextBlock x:Name="TextIpRep" Text="Verifies your exit country is Gemini-supported and flags datacenter IPs that Google distrusts." FontSize="11.5" Foreground="{StaticResource LabelSecondary}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- WARP guidance -->
+                    <Border CornerRadius="14" Padding="16,12" Background="{StaticResource NmCardBrush}" BorderBrush="{StaticResource NmBorderBrush}" BorderThickness="1">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Still blocked? Chain WARP" FontSize="14" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
+                            <TextBlock Text="Route Google/AI domains through Cloudflare WARP after the tunnel — WARP exit IPs have a clean reputation with Google. Configure a wireguard-outbound to WARP in your proxy app, or use a WARP-over-proxy subscription." FontSize="11.5" Foreground="{StaticResource LabelSecondary}" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

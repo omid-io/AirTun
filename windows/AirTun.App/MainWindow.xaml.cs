@@ -936,6 +936,71 @@ public sealed partial class MainWindow : Window
         });
     }
 
+    // ================= AI ACCESS TAB =================
+    private async void BtnIpv6Test_Click(object sender, RoutedEventArgs e)
+    {
+        BtnIpv6Test.IsEnabled = false;
+        TextIpv6Result.Text = "Testing…";
+        TextIpv6Result.Foreground = (Brush)Application.Current.Resources["LabelSecondary"];
+        try
+        {
+            using var v4 = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(8) };
+            var v4Task = v4.GetStringAsync("https://api-ipv4.ip.sb/ip");
+            using var v6 = new System.Net.Http.HttpClient(new System.Net.Http.HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(8) };
+            var v6Task = v6.GetStringAsync("https://api64.ipify.org");
+
+            string? v4Ip = null, v6Ip = null;
+            try { v4Ip = (await v4Task).Trim(); } catch { }
+            try { v6Ip = (await v6Task).Trim(); } catch { }
+
+            if (string.IsNullOrEmpty(v6Ip))
+            {
+                TextIpv6Result.Text = $"✓ No IPv6 leak — traffic stays on IPv4 ({v4Ip ?? "unknown"}).";
+                TextIpv6Result.Foreground = (Brush)Application.Current.Resources["AccentBrush"];
+            }
+            else
+            {
+                TextIpv6Result.Text = $"⚠ IPv6 LEAK detected: {v6Ip} (IPv4: {v4Ip ?? "none"}). Disable IPv6 in your proxy app — this is the #1 hidden cause of Google 403s.";
+                TextIpv6Result.Foreground = (Brush)Application.Current.Resources["AccentPressedBrush"];
+            }
+        }
+        catch (Exception ex) { TextIpv6Result.Text = $"✗ Test failed: {ex.Message}"; }
+        finally { BtnIpv6Test.IsEnabled = true; }
+    }
+
+    private async void BtnIpRep_Click(object sender, RoutedEventArgs e)
+    {
+        BtnIpRep.IsEnabled = false;
+        TextIpRep.Text = "Checking…";
+        TextIpRep.Foreground = (Brush)Application.Current.Resources["LabelSecondary"];
+        try
+        {
+            using var http = new System.Net.Http.HttpClient() { Timeout = TimeSpan.FromSeconds(8) };
+            var json = await http.GetStringAsync("http://ip-api.com/json/?fields=status,country,countryCode,isp,org,proxy,hosting,query");
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var ip = root.TryGetProperty("query", out var q) ? q.GetString() : "?";
+            var country = root.TryGetProperty("country", out var c) ? c.GetString() : "?";
+            var cc = root.TryGetProperty("countryCode", out var ccP) ? ccP.GetString() : "";
+            var isp = root.TryGetProperty("isp", out var i) ? i.GetString() : "?";
+            bool proxy = root.TryGetProperty("proxy", out var px) && px.GetBoolean();
+            bool hosting = root.TryGetProperty("hosting", out var hs) && hs.GetBoolean();
+
+            var supported = new[] { "US", "UK", "GB", "DE", "NL", "CA", "JP", "FR", "IT", "AU", "KR", "TW", "HK", "SG" };
+            bool geoOk = supported.Contains(cc, StringComparer.OrdinalIgnoreCase);
+
+            if (!geoOk)
+                TextIpRep.Text = $"✗ Exit: {ip} ({country}, {isp}). Country not Gemini-supported → 403 expected. Switch to a config exiting via US/UK/DE/NL/CA/JP.";
+            else if (proxy || hosting)
+                TextIpRep.Text = $"⚠ Exit: {ip} ({country}, {isp}) is a flagged datacenter/proxy IP. Sites work but Google AI may still 403. Prefer residential/mobile exits or chain WARP.";
+            else
+                TextIpRep.Text = $"✓ Exit: {ip} ({country}, {isp}) — clean residential-style IP. Google AI should work.";
+        }
+        catch (Exception ex) { TextIpRep.Text = $"✗ Check failed: {ex.Message}"; }
+        finally { BtnIpRep.IsEnabled = true; }
+    }
+
     private void CardModeTun_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         _controller.ActiveMode = "tun";
