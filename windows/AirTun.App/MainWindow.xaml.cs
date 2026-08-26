@@ -720,30 +720,34 @@ public sealed partial class MainWindow : Window
         NavTextLogs.FontWeight = tabIndex == 4 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
         NavTextAbout.FontWeight = tabIndex == 5 ? Microsoft.UI.Text.FontWeights.ExtraBold : Microsoft.UI.Text.FontWeights.Normal;
 
-        // Sunken active pill containers matching HTML
-        NavPillConnect.Background = tabIndex == 0 ? sunken : transparent;
-        NavPillConnect.BorderBrush = tabIndex == 0 ? sunkenBorder : transparent;
-        NavPillConnect.BorderThickness = new Thickness(tabIndex == 0 ? 1 : 0);
+        // Sunken active highlight for the selected rail button (matches HTML mockup)
+        var sunken = (Brush)Application.Current.Resources["FillSunken"];
+        var sunkenBorder = (Brush)Application.Current.Resources["NmSunkenBorderBrush"];
+        var transparent = new SolidColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
 
-        NavPillDns.Background = tabIndex == 1 ? sunken : transparent;
-        NavPillDns.BorderBrush = tabIndex == 1 ? sunkenBorder : transparent;
-        NavPillDns.BorderThickness = new Thickness(tabIndex == 1 ? 1 : 0);
+        NavBtnConnect.Background = tabIndex == 0 ? sunken : transparent;
+        NavBtnConnect.BorderBrush = tabIndex == 0 ? sunkenBorder : transparent;
+        NavBtnConnect.BorderThickness = new Thickness(tabIndex == 0 ? 1 : 0);
 
-        NavPillAi.Background = tabIndex == 2 ? sunken : transparent;
-        NavPillAi.BorderBrush = tabIndex == 2 ? sunkenBorder : transparent;
-        NavPillAi.BorderThickness = new Thickness(tabIndex == 2 ? 1 : 0);
+        NavBtnDns.Background = tabIndex == 1 ? sunken : transparent;
+        NavBtnDns.BorderBrush = tabIndex == 1 ? sunkenBorder : transparent;
+        NavBtnDns.BorderThickness = new Thickness(tabIndex == 1 ? 1 : 0);
 
-        NavPillRouting.Background = tabIndex == 3 ? sunken : transparent;
-        NavPillRouting.BorderBrush = tabIndex == 3 ? sunkenBorder : transparent;
-        NavPillRouting.BorderThickness = new Thickness(tabIndex == 3 ? 1 : 0);
+        NavBtnAi.Background = tabIndex == 2 ? sunken : transparent;
+        NavBtnAi.BorderBrush = tabIndex == 2 ? sunkenBorder : transparent;
+        NavBtnAi.BorderThickness = new Thickness(tabIndex == 2 ? 1 : 0);
 
-        NavPillLogs.Background = tabIndex == 4 ? sunken : transparent;
-        NavPillLogs.BorderBrush = tabIndex == 4 ? sunkenBorder : transparent;
-        NavPillLogs.BorderThickness = new Thickness(tabIndex == 4 ? 1 : 0);
+        NavBtnRouting.Background = tabIndex == 3 ? sunken : transparent;
+        NavBtnRouting.BorderBrush = tabIndex == 3 ? sunkenBorder : transparent;
+        NavBtnRouting.BorderThickness = new Thickness(tabIndex == 3 ? 1 : 0);
 
-        NavPillAbout.Background = tabIndex == 5 ? sunken : transparent;
-        NavPillAbout.BorderBrush = tabIndex == 5 ? sunkenBorder : transparent;
-        NavPillAbout.BorderThickness = new Thickness(tabIndex == 5 ? 1 : 0);
+        NavBtnLogs.Background = tabIndex == 4 ? sunken : transparent;
+        NavBtnLogs.BorderBrush = tabIndex == 4 ? sunkenBorder : transparent;
+        NavBtnLogs.BorderThickness = new Thickness(tabIndex == 4 ? 1 : 0);
+
+        NavBtnAbout.Background = tabIndex == 5 ? sunken : transparent;
+        NavBtnAbout.BorderBrush = tabIndex == 5 ? sunkenBorder : transparent;
+        NavBtnAbout.BorderThickness = new Thickness(tabIndex == 5 ? 1 : 0);
 
         // SVG icon stroke color — active = cyan, inactive = muted
         NavIconConnect.Stroke = tabIndex == 0 ? accent : muted;
