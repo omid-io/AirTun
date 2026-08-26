@@ -87,6 +87,7 @@ fun HomeScreen(
     batteryExempt: Boolean,
     warnings: Set<WarningCode>,
     themeMode: String,
+    speedBps: Long = 0L,
     lang: String = "en",
     logs: List<LocalLog.Entry>,
     onStart: () -> Unit,
@@ -181,6 +182,7 @@ fun HomeScreen(
                 bytesUp = bytesUp,
                 bytesDown = bytesDown,
                 isRunning = isRunning,
+                speedBps = speedBps,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -457,10 +459,12 @@ private fun MetricsGrid(
     bytesUp: Long,
     bytesDown: Long,
     isRunning: Boolean,
+    speedBps: Long,
 ) {
     val glass = LocalGlass.current
     val totalBytes = bytesUp + bytesDown
-    val speedText = if (isRunning && totalBytes > 0) "${formatBytes(totalBytes)}/s" else "0.0 KB/s"
+    // Real per-second speed sampled by MainViewModel (delta of cumulative counters).
+    val speedText = if (isRunning && speedBps > 0) "${formatBytes(speedBps)}/s" else "0 KB/s"
 
     Row(
         modifier = Modifier.fillMaxWidth(),

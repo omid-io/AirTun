@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirTun — ماکت گزینههای ناوبری ۶ تبه</title>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+<style>
+:root{
+  --bg:#0D1017; --surface:#10141D; --tertiary:#1C2232; --sunken:#090C12;
+  --accent:#00E5FF; --accent-soft:rgba(0,229,255,.15);
+  --label-pri:#F1F5F9; --label-sec:#94A3B8; --border:#232B3B;
+  --ok:#22C55E; --warn:#EAB308;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05070B;font-family:'Vazirmatn',Tahoma,sans-serif;color:var(--label-pri);
+     padding:24px;display:flex;flex-direction:column;align-items:center;gap:32px;min-height:100vh}
+h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.sub{color:var(--label-sec);font-size:13px;margin-bottom:16px;text-align:center}
+.gallery{display:flex;gap:36px;flex-wrap:wrap;justify-content:center}
+.variant{display:flex;flex-direction:column;align-items:center;gap:12px}
+.vtag{background:var(--accent-soft);color:var(--accent);padding:5px 14px;border-radius:20px;
+      font-size:12px;font-weight:700;border:1px solid rgba(0,229,255,.3)}
+.vnote{color:var(--label-sec);font-size:11.5px;max-width:300px;text-align:center;line-height:1.9}
+
+/* ---- Phone frame (440x700 scaled to ~330x525) ---- */
+.phone{width:340px;height:540px;background:var(--bg);border-radius:18px;border:6px solid #1a2030;
+       overflow:hidden;position:relative;display:flex;flex-direction:column;
+       box-shadow:0 20px 60px rgba(0,0,0,.55), inset 0 0 0 1px #161c28}
+.titlebar{height:30px;background:#0A0D14;display:flex;align-items:center;padding:0 12px;gap:6px;
+          border-bottom:1px solid var(--border);flex-shrink:0}
+.tb-dot{width:10px;height:10px;border-radius:3px;background:var(--tertiary)}
+.tb-title{font-size:10px;color:var(--label-sec);margin-right:auto;font-weight:700}
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* shared bits */
+.card{background:linear-gradient(135deg,#131725,#10141D);border:1px solid #202839;border-radius:14px;padding:12px}
+.lbl-sec{color:var(--label-sec)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:14px;font-size:10px;font-weight:600}
+
+/* ============ VARIANT A: segmented top ============ */
+.seg-top{display:flex;gap:4px;background:var(--sunken);border:1px solid var(--border);
+         border-radius:12px;padding:4px;margin:8px 12px 0}
+.seg-item{flex:1;text-align:center;padding:7px 2px;border-radius:9px;font-size:10.5px;font-weight:700;
+          color:var(--label-sec);cursor:pointer;transition:.15s}
+.seg-item.on{background:rgba(0,229,255,.13);color:var(--accent);box-shadow:inset 0 0 0 1px rgba(0,229,255,.35)}
+.seg-item svg{width:15px;height:15px;display:block;margin:0 auto 3px}
+.vA .power{margin:26px auto 14px;width:110px;height:110px;border-radius:50%;
+           background:radial-gradient(circle at 35% 30%,#1a2334,#0d1119);
+           border:2px solid #26314a;display:flex;align-items:center;justify-content:center;
+           box-shadow:0 8px 28px rgba(0,0,0,.5), inset 0 2px 6px rgba(255,255,255,.04)}
+.vA .power .bolt{width:44px;height:44px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round}
+.vA .pin{margin:0 12px}
+
+/* ============ VARIANT B: right rail ============ */
+.vB-body{flex:1;display:flex;min-height:0}
+.rail{width:52px;background:#0A0D14;border-left:1px solid var(--border);display:flex;
+      flex-direction:column;align-items:center;padding:12px 0;gap:6px;order:-1}
+.rail .rbtn{width:40px;height:40px;border-radius:12px;display:flex;flex-direction:column;gap:2px;
+            align-items:center;justify-content:center;color:var(--label-sec);font-size:7.5px;font-weight:700}
+.rail .rbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.rail .rbtn.on{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 1px rgba(0,229,255,.3)}
+.rail .spacer{flex:1}
+.vB-main{flex:1;padding:10px;overflow:hidden}
+.vB .mini-power{margin:14px auto;width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#1a2334,#0d1119);
+   border:2px solid #26314a;display:flex;align-items:center;justify-content:center}
+.vB .mini-power svg{width:30px;height:30px;stroke:var(--accent);fill:none;stroke-width:2}
+
+/* ============ VARIANT C: header icons ============ */
+.hdr-c{height:34px;display:flex;align-items:center;padding:0 12px;gap:8px;border-bottom:1px solid var(--border)}
+.hdr-c .logo{width:14px;height:14px}
+.hdr-c .htitle{font-size:11px;font-weight:800;margin-right:auto}
+.hdr-icon{width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+          color:var(--label-sec);cursor:pointer}
+.hdr-icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.hdr-icon.on{background:var(--accent-soft);color:var(--accent)}
+.lang-pill{border:1px solid var(--border);border-radius:8px;padding:2px 7px;font-size:9px;color:var(--label-sec)}
+
+/* mock content cards (shared) */
+.stat-row{display:flex;gap:8px;margin:8px 12px}
+.stat{flex:1;text-align:center}
+.stat .v{font-size:15px;font-weight:800;color:var(--accent);font-family:monospace}
+.stat .k{font-size:9px;color:var(--label-sec)}
+.logline{font-family:monospace;font-size:8.5px;color:var(--label-sec);padding:3px 12px;white-space:nowrap;overflow:hidden}
+.ok{color:var(--ok)} .warn{color:var(--warn)} .acc{color:var(--accent)}
+.dns-row{display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-bottom:1px solid #141a26;font-size:10.5px}
+.dns-name{font-weight:700} .dns-ip{font-family:monospace;color:var(--label-sec);font-size:9.5px}
+.chip-ok{background:rgba(34,197,94,.15);color:var(--ok);padding:1px 7px;border-radius:9px;font-size:8.5px;font-weight:700}
+</style>
+</head>
+<body>
+<h1>ماکت ناوبری ۶ تبه — AirTun Windows</h1>
+<div class="sub">سه گزینه جایگذاری تبهای جدید DNS و AI Access در عرض فعلی ۴۴۰×۷۰۰</div>
+
+<div class="gallery">
+
+<!-- ================= VARIANT A ================= -->
+<div class="variant vA">
+  <span class="vtag">گزینه A — Segmented بالای صفحه</span>
+  <div class="phone">
+    <div class="titlebar"><div class="tb-dot"></div><div class="tb-dot"></div><div class="tb-dot"></div><span class="tb-title">AirTun</span></div>
+    <div class="seg-top">
+      <div class="seg-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>اتصال</div>
+      <div class="seg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>DNS</div>
+      <div class="seg-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>AI</div>
+      <div class="seg-item">مسیر</div>
+    </div>
+    <!-- bottom nav for remaining tabs -->
+    <div style="display:flex;gap:4px;padding:6px 12px 0">
+      <div class="pill" style="background:var(--sunken);border:1px solid var(--border);color:var(--label-sec)">📄 گزارشها</div>
+      <div class="pill" style="background:var(--sunken);border:1px solid var(--border);color:var(--label-sec)">⚙️ تنظیمات</div>
+    </div>
+    <div class="power"><svg class="bolt" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <div class="stat-row">
+      <div class="stat"><div class="v">10808</div><div class="k">PORT</div></div>
+      <div class="stat"><div class="v">---- </div><div class="k">PIN</div></div>
+      <div class="stat"><div class="v">0</div><div class="k">DEVICES</div></div>
+    </div>
+  </div>
+  <div class="vnote">تب اصلی + ۳ ابزار پرکاربرد در سگمنت بالا؛ گزارشها/تنظیمات به pill ثانویه منتقل شده. دکمه پاور همیشه در خانه دیده میشود.</div>
+</div>
+
+<!-- ================= VARIANT B ================= -->
+<div class="variant vB">
+  <span class="vtag">گزینه B — Rail سمت راست</span>
+  <div class="phone">
+    <div class="titlebar"><div class="tb-dot"></div><div class="tb-dot"></div><div class="tb-dot"></div><span class="tb-title">AirTun</span></div>
+    <div class="vB-body">
+      <div class="rail">
+        <div class="rbtn on"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>اتصال</div>
+        <div class="rbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg>DNS</div>
+        <div class="rbtn"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>AI</div>
+        <div class="rbtn"><svg viewBox="0 0 24 24"><path d="M6 3v12M21 6a3 3 0 10-6 0 3 3 0 106 0zM9 18a3 3 0 10-6 0 3 3 0 106 0zm9-9a9 9 0 01-9 9"/></svg>مسیر</div>
+        <div class="rbtn"><svg viewBox="0 0 24 24"><path d="M4 17l6-6-6-6M12 19h8"/></svg>لاگ</div>
+        <div class="rbtn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>تنظیم</div>
+      </div>
+      <div class="vB-main">
+        <div class="card"><span class="lbl-sec" style="font-size:9.5px">وضعیت</span><br><b style="font-size:12px;color:var(--accent)">آماده اتصال</b></div>
+        <div class="mini-power"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+        <div class="dns-row"><span><span class="dns-name">Google</span><br><span class="dns-ip">8.8.8.8 · 42ms ✓</span></span><span class="chip-ok">فعال</span></div>
+        <div class="dns-row"><span><span class="dns-name">403.online</span><br><span class="dns-ip">10.202.10.202 · 31ms ✓</span></span><span></span></div>
+        <div class="logline">[OK] Chained via :12334 → api.ipify.org</div>
+        <div class="logline"><span class="ok">[TEST] Foreign VPN IP detected ✓</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="vnote">همه ۶ تب در یک ریل عمودی — مقیاسپذیر برای تبهای آینده؛ ولی ۵۲px از عرض ۴۴۰px را میگیرد.</div>
+</div>
+
+<!-- ================= VARIANT C ================= -->
+<div class="variant">
+  <span class="vtag">گزینه C — آیکن در Header</span>
+  <div class="phone">
+    <div class="hdr-c">
+      <svg class="logo" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="none" stroke="#00E5FF" stroke-width="2"/></svg>
+      <span class="htitle">AirTun</span>
+      <div class="hdr-icon on" title="اتصال"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+      <div class="hdr-icon" title="DNS"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg></div>
+      <div class="hdr-icon" title="AI Access"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M9 20h6"/></svg></div>
+      <div class="hdr-icon" title="Routing"><svg viewBox="0 0 24 24"><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg></div>
+      <div class="lang-pill">FA</div>
+    </div>
+    <div style="padding:10px 12px 0;display:flex;gap:6px;align-items:center">
+      <div class="pill" style="background:var(--sunken);border:1px solid var(--border);color:var(--label-sec)">📄 لاگها</div>
+      <div class="pill" style="background:var(--sunken);border:1px solid var(--border);color:var(--label-sec)">⚙️ تنظیمات</div>
+    </div>
+    <div class="vA power" style="margin:30px auto 16px;width:104px;height:104px"><svg class="bolt" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <div class="stat-row">
+      <div class="stat"><div class="v">192.168.43.1</div><div class="k">HOST</div></div>
+      <div class="stat"><div class="v">----</div><div class="k">PIN</div></div>
+    </div>
+  </div>
+  <div class="vnote">مینیمالترین: فقط ۳ آیکن کوچک در هدر کنار زبان؛ صفر فضای اضافه ولی discoverability کمتر.</div>
+</div>
+
+</div>
+<script>
+document.querySelectorAll('.seg-item,.rbtn,.hdr-icon').forEach(el=>{
+  el.addEventListener('click',()=>{
+    const group = el.parentElement;
+    group.querySelectorAll('.on').forEach(x=>x.classList.remove('on'));
+    el.classList.add('on');
+  });
+});
+</script>
+</body>
+</html>

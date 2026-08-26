@@ -28,7 +28,7 @@
     <string name="phone_pin_card_title">Connection PIN</string>
     <string name="phone_pin_copied">PIN %s Copied</string>
     <string name="phone_metric_devices">Connected Devices</string>
-    <string name="phone_metric_speed">Live Speed</string>
+    <string name="phone_metric_speed">Data Used</string>
     <string name="phone_help_card_title">Windows Client Required</string>
     <string name="phone_help_card_desc">To use AirTun, install and run the Windows version on your laptop or PC.</string>
     <string name="phone_download_label">Download for Windows</string>

@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
                         val state by viewModel.state.collectAsState()
                         val batteryExempt by viewModel.batteryExempt.collectAsState()
                         val warnings by viewModel.warnings.collectAsState()
+                        val speedBps by viewModel.speedBps.collectAsState()
                         val logs by viewModel.logs.collectAsState()
 
                         LaunchedEffect(lifecycleOwner) {
@@ -95,6 +96,7 @@ class MainActivity : ComponentActivity() {
                             batteryExempt = batteryExempt,
                             warnings = warnings,
                             themeMode = themeMode,
+                            speedBps = speedBps,
                             lang = lang,
                             logs = logs,
                             onStart = {

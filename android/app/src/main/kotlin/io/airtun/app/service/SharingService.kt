@@ -206,12 +206,18 @@ class SharingService : Service() {
 
     private fun manageWakeLock(hold: Boolean) {
         if (hold) {
-            if (wakeLock == null) {
+            if (wakeLock?.isHeld != true) {
                 val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
                 wakeLock = powerManager.newWakeLock(
                     PowerManager.PARTIAL_WAKE_LOCK,
                     "AirTun:TransferWakeLock",
-                ).apply { acquire(10 * 60 * 1000L) }
+                ).apply {
+                    // No timeout: the lock lives as long as a client is connected and is
+                    // released in teardown()/manageWakeLock(false). A timed acquire (10min)
+                    // caused traffic stalls after screen-off (Doze) — the "5-minute drop".
+                    setReferenceCounted(false)
+                    acquire()
+                }
             }
         } else {
             wakeLock?.let {

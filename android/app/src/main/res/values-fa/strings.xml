@@ -28,7 +28,7 @@
     <string name="phone_pin_card_title">پین‌کد اتصال</string>
     <string name="phone_pin_copied">پین %s کپی شد</string>
     <string name="phone_metric_devices">دستگاه‌های متصل</string>
-    <string name="phone_metric_speed">سرعت زنده</string>
+    <string name="phone_metric_speed">حجم مصرفی</string>
     <string name="phone_help_card_title">نیازمند کلاینت ویندوز</string>
     <string name="phone_help_card_desc">برای استفاده از AirTun، نسخه ویندوز را روی لپ‌تاپ یا سیستم خود اجرا کنید.</string>
     <string name="phone_download_label">دانلود برای ویندوز</string>
