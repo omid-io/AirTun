@@ -21,7 +21,7 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <Image Source="Assets/TitleBarLogo.png" Height="20" VerticalAlignment="Center" Stretch="Uniform" />
                 <Border Background="{StaticResource FillTertiary}" CornerRadius="6" Padding="6,2" Margin="4,0,0,0" VerticalAlignment="Center" BorderBrush="{StaticResource NmSunkenBorderBrush}" BorderThickness="1">
-                    <TextBlock Text="v1.1" FontSize="11" Foreground="{StaticResource LabelSecondary}" />
+                    <TextBlock Text="v2.0" FontSize="11" Foreground="{StaticResource LabelSecondary}" />
                 </Border>
             </StackPanel>
 

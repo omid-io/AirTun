@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-val airtunVersion: String = (project.findProperty("airtunVersion") as String?) ?: "1.1.0"
+val airtunVersion: String = (project.findProperty("airtunVersion") as String?) ?: "2.0.0"
 val airtunVersionCode: Int = airtunVersion.substringBefore("-").split(".").let { parts ->
     val major = parts.getOrNull(0)?.toIntOrNull() ?: 1
     val minor = parts.getOrNull(1)?.toIntOrNull() ?: 0

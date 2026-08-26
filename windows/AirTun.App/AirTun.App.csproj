@@ -24,9 +24,9 @@
     <LangVersion>latest</LangVersion>
     <DefaultLanguage>en-US</DefaultLanguage>
     <SatelliteResourceLanguages>en-US;fa-IR</SatelliteResourceLanguages>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>2.0.0</Version>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
