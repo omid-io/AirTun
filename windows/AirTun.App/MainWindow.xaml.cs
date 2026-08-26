@@ -409,9 +409,19 @@ public sealed partial class MainWindow : Window
         BtnLangToggle.Content = Strings.IsPersian ? "EN" : "FA";
 
         NavTextConnect.Text = Strings.TabConnect;
+        NavTextDns.Text = Strings.TabDns;
+        NavTextAi.Text = Strings.TabAi;
         NavTextRouting.Text = Strings.TabRouting;
         NavTextLogs.Text = Strings.TabLogs;
         NavTextAbout.Text = Strings.TabAbout;
+
+        TextDnsTitle.Text = Strings.DnsTitle;
+        TextDnsSubtitle.Text = Strings.DnsSubtitle;
+        BtnTestAllDns.Content = Strings.DnsTestAll;
+        BtnApplyDns.Content = Strings.DnsSet;
+        BtnFlushDns.Content = Strings.DnsFlush;
+        BtnUnsetDns.Content = Strings.DnsUnset;
+        BtnAddDns.Content = Strings.DnsAddCustom;
 
         TextStatus.Text = Strings.StatusIdle;
         TextTunSub.Text = Strings.ModeTunSubtitle;
@@ -802,10 +812,10 @@ public sealed partial class MainWindow : Window
                               "builtin-vanilla", "builtin-beshkan", "builtin-shelter", "builtin-begzar", "builtin-pishgaman" };
         return new[]
         {
-            ("🛡 ضد تحریم — ایران", _dnsServers.FindAll(s => iranIds.Contains(s.Id))),
-            ("🌍 جهانی", _dnsServers.FindAll(s =>
+            (Strings.DnsGroupIran, _dnsServers.FindAll(s => iranIds.Contains(s.Id))),
+            (Strings.DnsGroupGlobal, _dnsServers.FindAll(s =>
                 s.Id.StartsWith("builtin-") && !iranIds.Contains(s.Id))),
-            ("📦 سفارشی", _dnsServers.FindAll(s => !s.BuiltIn)),
+            (Strings.DnsGroupCustom, _dnsServers.FindAll(s => !s.BuiltIn)),
         };
     }
 
@@ -892,6 +902,7 @@ public sealed partial class MainWindow : Window
         var s = _dnsServers.FirstOrDefault(x => x.Id == _dnsActiveId);
         if (s is null) { TextActiveName.Text = "—"; return; }
         TextActiveName.Text = s.Label;
+        TextActiveBadge.Text = Strings.DnsActiveBadge;
         TextActiveAddr.Text = s.Kind == "system" ? "OS default"
             : s.Kind == "doh" ? s.DohUrl ?? ""
             : s.Primary + (string.IsNullOrEmpty(s.Secondary) ? "" : $" / {s.Secondary}");
@@ -900,8 +911,12 @@ public sealed partial class MainWindow : Window
         var target = SmartDnsApplier.Current;
         TextDnsStatus.Visibility = Visibility.Visible;
         TextDnsStatus.Text = target is null
-            ? "برای اعمال روی سیستم، انتخاب کنید و دکمه ✓ Set را بزنید."
-            : $"📍 اعمالشده روی: {target.AdapterName}";
+            ? (Strings.IsPersian
+                ? "برای اعمال روی سیستم، انتخاب کنید و دکمه ✓ تنظیم را بزنید."
+                : "Pick a resolver, then press ✓ Set to apply it system-wide.")
+            : (Strings.IsPersian
+                ? $"📍 اعمالشده روی: {target.AdapterName}"
+                : $"📍 Applied to: {target.AdapterName}");
     }
 
     private async void BtnTestAllDns_Click(object sender, RoutedEventArgs e)

@@ -20,6 +20,20 @@ public static class Strings
     public static string TabRouting => _isPersian ? "مسیریابی" : "Routing";
     public static string TabLogs => _isPersian ? "گزارش‌ها" : "Logs";
     public static string TabAbout => _isPersian ? "تنظیمات" : "Settings";
+    public static string TabDns => _isPersian ? "DNS" : "DNS";
+    public static string TabAi => _isPersian ? "هوش مصنوعی" : "AI";
+
+    public static string DnsTitle => _isPersian ? "سرورهای DNS" : "DNS Servers";
+    public static string DnsSubtitle => _isPersian ? "ریزولور انتخابی برای تونل و ویندوز" : "Choose which resolver the tunnel and Windows use";
+    public static string DnsTestAll => _isPersian ? "⚡ تست همه" : "⚡ Test All";
+    public static string DnsSet => _isPersian ? "✓ تنظیم" : "✓ Set";
+    public static string DnsFlush => _isPersian ? "🧹 پاکسازی کش" : "🧹 Flush DNS";
+    public static string DnsUnset => _isPersian ? "لغو ✕" : "Unset ✕";
+    public static string DnsAddCustom => _isPersian ? "＋ افزودن DNS سفارشی" : "+ Add custom DNS";
+    public static string DnsActiveBadge => _isPersian ? "فعال" : "ACTIVE";
+    public static string DnsGroupIran => _isPersian ? "🛡 ضد تحریم — ایران" : "🛡 Anti-Sanction — Iran";
+    public static string DnsGroupGlobal => _isPersian ? "🌍 جهانی" : "🌍 Global";
+    public static string DnsGroupCustom => _isPersian ? "📦 سفارشی" : "📦 Custom";
 
     // Statuses
     public static string StatusIdle => _isPersian ? "آماده برای اتصال" : "Ready to Connect";

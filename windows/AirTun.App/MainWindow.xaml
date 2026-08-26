@@ -328,23 +328,66 @@
 
             <!-- TAB 2: DNS -->
             <ScrollViewer x:Name="ViewTabDns" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
-                <StackPanel Spacing="14">
+                <StackPanel Spacing="12">
                     <StackPanel Spacing="3">
-                        <TextBlock Text="DNS Servers" FontSize="20" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
-                        <TextBlock Text="Choose which resolver the tunnel and Windows use" FontSize="12" Foreground="{StaticResource LabelSecondary}" />
+                        <TextBlock x:Name="TextDnsTitle" Text="DNS Servers" FontSize="20" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}" />
+                        <TextBlock x:Name="TextDnsSubtitle" Text="Choose which resolver the tunnel and Windows use" FontSize="12" Foreground="{StaticResource LabelSecondary}" />
                     </StackPanel>
-                    <TextBlock x:Name="TextActiveName"/>
-                    <TextBlock x:Name="TextActiveAddr"/>
-                    <TextBlock x:Name="TextActiveLatency"/>
+
+                    <!-- ACTIVE CARD -->
+                    <Border CornerRadius="14" Padding="13,11" BorderThickness="1.5"
+                            Background="#1700E5FF" BorderBrush="{StaticResource AccentBrush}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="38" Height="38" CornerRadius="10"
+                                    Background="#2600E5FF">
+                                <TextBlock Text="DNS" FontSize="12" FontWeight="Black" Foreground="{StaticResource AccentBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" Margin="11,0,6,0" VerticalAlignment="Center" Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <TextBlock x:Name="TextActiveName" Text="—" FontSize="14" FontWeight="Bold" Foreground="{StaticResource LabelPrimary}"/>
+                                    <Border Background="{StaticResource AccentBrush}" CornerRadius="99" Padding="7,2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="TextActiveBadge" Text="ACTIVE" FontSize="8.5" FontWeight="Black" Foreground="#00232C"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock x:Name="TextActiveAddr" Text="—" FontSize="10.5" FontFamily="Consolas" Foreground="{StaticResource LabelSecondary}" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+                                <TextBlock x:Name="TextActiveLatency" Text="" FontFamily="Consolas" FontSize="11.5"
+                                           VerticalAlignment="Center" Foreground="{StaticResource LabelPrimary}"/>
+                                <Button x:Name="BtnUnsetDns" Content="Unset ✕" Click="BtnUnsetDns_Click"
+                                        Style="{StaticResource SecondaryButton}" Padding="10,6"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- TOOLBAR -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" x:Name="BtnTestAllDns" Content="⚡ Test All" Margin="0,0,5,0"
+                                Click="BtnTestAllDns_Click" Style="{StaticResource SecondaryButton}" Padding="0,9"/>
+                        <Button Grid.Column="1" x:Name="BtnApplyDns" Content="✓ Set" Margin="0,0,5,0"
+                                Click="BtnApplyDns_Click" Style="{StaticResource SecondaryButton}" Padding="0,9"/>
+                        <Button Grid.Column="2" x:Name="BtnFlushDns" Content="🧹 Flush DNS"
+                                Click="BtnFlushDns_Click" Style="{StaticResource SecondaryButton}" Padding="0,9"/>
+                    </Grid>
+
+                    <!-- GROUPS (rendered in code) -->
                     <StackPanel x:Name="DnsGroupsPanel" Spacing="4"/>
-                    <Button x:Name="BtnTestAllDns" Click="BtnTestAllDns_Click"/>
-                    <Button x:Name="BtnApplyDns" Click="BtnApplyDns_Click"/>
-                    <Button x:Name="BtnFlushDns" Click="BtnFlushDns_Click"/>
-                    <Button x:Name="BtnUnsetDns" Click="BtnUnsetDns_Click"/>
-                    <TextBlock x:Name="TextDnsStatus"/>
-                    <StackPanel x:Name="DnsListPanel" Spacing="8" />
+
                     <Button x:Name="BtnAddDns" Content="+ Add custom DNS" HorizontalAlignment="Stretch" Padding="0,10"
                             Style="{StaticResource SecondaryButton}" Click="BtnAddDns_Click" />
+
+                    <!-- APPLY STATUS -->
+                    <TextBlock x:Name="TextDnsStatus" Text="" FontSize="11" Foreground="{StaticResource LabelSecondary}"
+                               TextWrapping="Wrap" Visibility="Collapsed"/>
                 </StackPanel>
             </ScrollViewer>
 
