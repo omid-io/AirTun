@@ -187,7 +187,9 @@ func startDNSForwarder(listenAddr string, proxyUrl *url.URL) (func(), error) {
 				return dialer.Dial(network, addr)
 			},
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				// DoH upstreams are public resolvers (1.1.1.1/dns.google) reached
+				// through the tunnel; certificate verification stays ON.
+				InsecureSkipVerify: false,
 			},
 			MaxIdleConns:        100,
 			MaxIdleConnsPerHost: 20,

@@ -48,3 +48,5 @@ GEMINI.md
 .gemini/
 .agents/
 .hermes/
+crash.log
+*.log.tmp
