@@ -47,3 +47,4 @@ GEMINI.md
 *.gemini.md
 .gemini/
 .agents/
+.hermes/
