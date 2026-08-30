@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="branding/logo-icon.png" width="96" alt="AirTun Logo" />
+<img src="branding/github_banner.png" width="100%" alt="AirTun Hero Banner" />
 
 # ⚡ AirTun
 ### Ultra-Fast, Low-Latency Mobile Internet &amp; VPN Sharing for Windows
