@@ -3,8 +3,8 @@
 <img src="branding/github_banner.png" width="100%" alt="AirTun Hero Banner" />
 
 # ⚡ AirTun
-### Ultra-Fast, Low-Latency Mobile Internet &amp; VPN Sharing for Windows
-**اشتراک‌گذاری پرسرعت، پایدار و بدون مرز اینترنت و وی‌پی‌ان گوشی با ویندوز**
+### Ultra-Fast, Low-Latency Mobile Internet &amp; Network Tunneling for Windows
+**اشتراک‌گذاری پرسرعت، پایدار و بدون مرز اینترنت و ترافیک شبکه گوشی با ویندوز بر بستر LAN**
 
 [![Release](https://img.shields.io/badge/Release-v1.1.0-00E5FF.svg)](https://github.com/omid-io/AirTun/releases/latest)
 [![Build & Test](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#-tests--quality-assurance)
@@ -145,7 +145,7 @@ cd android && ./gradlew testDebugUnitTest
 
 ## 📖 معرفی پروژه
 
-**AirTun (ایر‌تون)** یک راهکار مدرن، سبک و با تاخیر نزدیک به صفر برای اشتراک‌گذاری اینترنت و وی‌پی‌ان گوشی‌های اندرویدی با سیستم‌های ویندوزی است. برخلاف روش‌های سنتی هات‌اسپات که توسط اپراتورها مسدود می‌شوند یا پینگ بازی‌ها را به شدت افزایش می‌دهند، AirTun از **یک هسته بومی SOCKS5/UDP در اندروید** و **یک کلاینت قدرتمند با رابط کاربری WinUI 3 در ویندوز** استفاده می‌کند.
+**AirTun (ایر‌تون)** یک راهکار مدرن، سبک و با تاخیر نزدیک به صفر برای اشتراک‌گذاری اینترنت پرسرعت، ترافیک ضدتحریم و فورواردینگ پکت‌های شبکه میان گوشی‌های اندرویدی و سیستم‌های ویندوزی بر بستر شبکه محلی (LAN) است. برخلاف روش‌های سنتی هات‌اسپات که توسط اپراتورها مسدود می‌شوند یا پینگ بازی‌ها را به شدت افزایش می‌دهند، AirTun از **یک هسته بومی SOCKS5/UDP در اندروید** و **یک کلاینت قدرتمند با رابط کاربری WinUI 3 در ویندوز** استفاده می‌کند.
 
 ---
 
